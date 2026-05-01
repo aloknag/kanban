@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { TopRule } from './TopRule'
 
 describe('TopRule', () => {
@@ -13,7 +14,16 @@ describe('TopRule', () => {
   })
 
   const renderWithRouter = (component: React.ReactElement) => {
-    return render(<BrowserRouter>{component}</BrowserRouter>)
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    })
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>{component}</BrowserRouter>
+      </QueryClientProvider>
+    )
   }
 
   it('renders the wordmark', () => {

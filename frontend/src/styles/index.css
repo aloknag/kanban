@@ -47,14 +47,44 @@
   }
 }
 
+@keyframes poll-pulse {
+  0% {
+    color: var(--c-ink-2);
+  }
+  50% {
+    color: var(--c-signal);
+  }
+  100% {
+    color: var(--c-ink-2);
+  }
+}
+
 [data-new] {
   animation: fade-signal 8s linear forwards;
+}
+
+.animate-poll-pulse {
+  animation: poll-pulse 80ms ease-out forwards;
 }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* Per §14: when prefers-reduced-motion, show signal for full 8s then disappear */
+  @keyframes fade-signal-instant {
+    0%, 99.99% {
+      box-shadow: inset 1px 0 0 var(--c-signal);
+    }
+    100% {
+      box-shadow: none;
+    }
+  }
+
+  [data-new] {
+    animation: fade-signal-instant 8s step-end forwards;
   }
 }
 

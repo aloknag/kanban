@@ -9,11 +9,13 @@
  */
 
 import { useLocation, Link } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { PollIndicator } from '../../system/PollIndicator'
 
 export function TopRule() {
   const location = useLocation()
   const [time, setTime] = useState<string>('')
+  const glyphRef = useRef<HTMLSpanElement>(null)
 
   // Update clock every second
   useEffect(() => {
@@ -66,9 +68,14 @@ export function TopRule() {
       {/* Right: Clock, poll indicator, theme toggle, and close */}
       <div className="flex items-center gap-tight font-mono text-meta text-ink2">
         <span>{time || '··:··:··'}</span>
-        <span className="text-signal" aria-label="poll indicator">
+        <span
+          ref={glyphRef}
+          className="text-signal transition-colors duration-fast"
+          aria-label="poll indicator"
+        >
           ◇
         </span>
+        <PollIndicator glyphRef={glyphRef} />
         <span className="text-ink3 cursor-pointer hover:text-ink transition-colors" aria-label="theme toggle">
           ◑
         </span>

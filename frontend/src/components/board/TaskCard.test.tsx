@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { TaskCard } from './TaskCard'
 import { Task } from '../../lib/api'
@@ -97,8 +97,9 @@ describe('TaskCard', () => {
       const { container } = renderWithRouter(<TaskCard task={mockTask} />)
       const article = container.querySelector('article')
       const className = article?.className || ''
-      // Check for forbidden patterns
-      expect(className).not.toMatch(/shadow-/)
+      // Per FrontEngDesign.md §2.4: shadow only allowed as data-[new]:shadow for fade effect
+      // The only acceptable shadow is 0 0 0 2px for focus rings, but we use inset for data-new fade
+      expect(className).toMatch(/data-\[new\]:shadow-\[inset/)
       expect(className).not.toMatch(/rounded-[xlmd]/)
       expect(className).not.toMatch(/transform/)
       expect(className).not.toMatch(/scale-/)
@@ -123,6 +124,76 @@ describe('TaskCard', () => {
       renderWithRouter(<TaskCard task={mockTask} />)
       const article = screen.getByRole('article', { hidden: true })
       expect(article).toHaveAttribute('aria-labelledby', 'task-1-title')
+    })
+  })
+
+  describe('Fade animation for new indicator', () => {
+    it('applies data-new attribute when isNew is true', () => {
+      const { container } = renderWithRouter(
+        <TaskCard task={mockTask} isNew={true} />
+      )
+      const article = container.querySelector('article')
+      expect(article).toHaveAttribute('data-new')
+    })
+
+    it('clears timeout on unmount or when isNew becomes false', () => {
+      const setTimeoutSpy = vi.spyOn(global, 'setTimeout')
+      const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout')
+
+      const { rerender } = renderWithRouter(
+        <TaskCard task={mockTask} isNew={true} />
+      )
+
+      // Should have created a timeout
+      expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 8000)
+
+      // When isNew becomes false, the timeout should be cleared
+      rerender(
+        <BrowserRouter>
+          <TaskCard task={mockTask} isNew={false} />
+        </BrowserRouter>
+      )
+
+      // Cleanup (unmount) should clear the timeout
+      expect(clearTimeoutSpy).toHaveBeenCalled()
+
+      setTimeoutSpy.mockRestore()
+      clearTimeoutSpy.mockRestore()
+    })
+
+    it('applies inset shadow class with transition for fade effect', () => {
+      const { container } = renderWithRouter(
+        <TaskCard task={mockTask} isNew={true} />
+      )
+      const article = container.querySelector('article')
+      const className = article?.className || ''
+
+      // Should have shadow and transition classes for fade
+      expect(className).toContain('shadow-[inset_1px_0_0_var(--c-signal)]')
+      expect(className).toContain('transition-')
+      expect(className).toContain('duration-')
+    })
+
+    it('has correct data-new attribute and shadow styling', () => {
+      const { container } = renderWithRouter(
+        <TaskCard task={mockTask} isNew={true} />
+      )
+      const article = container.querySelector('article[data-new]')
+      expect(article).toBeInTheDocument()
+
+      // Verify the shadow and transition classes are present
+      const className = article?.className || ''
+      expect(className).toContain('data-[new]:shadow-')
+      expect(className).toContain('data-[new]:transition-[box-shadow]')
+      expect(className).toContain('data-[new]:duration-[8000ms]')
+    })
+
+    it('does not apply data-new when isNew is false', () => {
+      const { container } = renderWithRouter(
+        <TaskCard task={mockTask} isNew={false} />
+      )
+      const article = container.querySelector('article')
+      expect(article).not.toHaveAttribute('data-new')
     })
   })
 })

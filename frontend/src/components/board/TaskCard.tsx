@@ -10,6 +10,7 @@
  */
 
 import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { Task } from '../../lib/api'
 
 type Props = {
@@ -18,12 +19,29 @@ type Props = {
 }
 
 export function TaskCard({ task, isNew = false }: Props) {
+  const [showNew, setShowNew] = useState(isNew)
+
+  useEffect(() => {
+    if (isNew) {
+      setShowNew(true)
+      const timer = setTimeout(() => {
+        setShowNew(false)
+      }, 8000)
+      return () => clearTimeout(timer)
+    }
+  }, [isNew])
+
   return (
     <article
       data-task-id={task.id}
-      data-new={isNew || undefined}
+      data-new={showNew || undefined}
       aria-labelledby={`task-${task.id}-title`}
-      className="group relative bg-card border-hair border-ink3 p-card transition-colors duration-fast hover:border-ink"
+      className={[
+        'group relative bg-card border-hair border-ink3 p-card',
+        'transition-colors duration-fast hover:border-ink',
+        'data-[new]:shadow-[inset_1px_0_0_var(--c-signal)]',
+        'data-[new]:transition-[box-shadow] data-[new]:duration-[8000ms]',
+      ].join(' ')}
     >
       {/* Meta row: ID, epic, assignee, timestamp */}
       <header className="flex items-baseline gap-tight text-meta font-mono text-ink3 flex-wrap">

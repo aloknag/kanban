@@ -197,13 +197,18 @@ describe('Board', () => {
 
       renderWithProviders(<Board />)
 
+      // Wait for both tasks to be rendered
       await waitFor(() => {
         expect(screen.getByText('Recent task')).toBeInTheDocument()
+        expect(screen.getByText('Old task')).toBeInTheDocument()
       })
 
       // Task 1 (5s ago) should have data-new attribute (within 8s window)
-      const recentCard = screen.getByText('Recent task').closest('[data-task-id]')
-      expect(recentCard).toHaveAttribute('data-new')
+      // Wait for the attribute to appear as Board's useEffect computes recentlyUpdatedTaskIds
+      await waitFor(() => {
+        const recentCard = screen.getByText('Recent task').closest('[data-task-id]')
+        expect(recentCard).toHaveAttribute('data-new')
+      })
 
       // Task 2 (10s ago) should NOT have data-new attribute (outside 8s window)
       const oldCard = screen.getByText('Old task').closest('[data-task-id]')
