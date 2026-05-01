@@ -15,7 +15,7 @@ export interface ColumnProps {
   }>
 }
 
-export function Column({ id, title, tasks = [] }: ColumnProps) {
+export function Column({ title, tasks = [] }: Omit<ColumnProps, 'id'>) {
   return (
     <div data-testid="column" className="flex flex-col gap-2 p-4 bg-surface rounded-lg">
       <div data-testid="column-header" className="font-semibold text-sm text-ink mb-2">

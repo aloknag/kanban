@@ -27,7 +27,7 @@ export function Board() {
     error: columnsError,
   } = useQuery<ColumnType[]>({
     queryKey: ['columns'],
-    queryFn: getColumns,
+    queryFn: () => getColumns(),
   })
 
   // Fetch tasks
@@ -37,7 +37,7 @@ export function Board() {
     error: tasksError,
   } = useQuery<Task[]>({
     queryKey: ['tasks'],
-    queryFn: getTasks,
+    queryFn: () => getTasks(),
   })
 
   // Track recently updated tasks for "new" indicator (8 second decay)
@@ -47,7 +47,7 @@ export function Board() {
     const now = Date.now()
     const newTaskIds = new Set<number>()
 
-    tasks.forEach(task => {
+    tasks.forEach((task: Task) => {
       if (task.updated_at) {
         const taskTime = new Date(task.updated_at).getTime()
         const ageMs = now - taskTime
@@ -65,7 +65,7 @@ export function Board() {
       setRecentlyUpdatedTaskIds(prev => {
         const next = new Set(prev)
         prev.forEach(taskId => {
-          const task = tasks.find(t => t.id === taskId)
+          const task = tasks.find((t: Task) => t.id === taskId)
           if (task?.updated_at) {
             const taskTime = new Date(task.updated_at).getTime()
             const ageMs = now - taskTime
