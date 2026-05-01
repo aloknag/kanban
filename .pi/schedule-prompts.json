@@ -8,11 +8,11 @@
       "enabled": true,
       "type": "cron",
       "createdAt": "2026-05-01T12:43:05.502Z",
-      "runCount": 3,
+      "runCount": 4,
       "description": "Orchestrate parallel sub-agents to drain the AgentBoard backlog (one wave per 15 mins)",
       "lastStatus": "success",
-      "lastRun": "2026-05-01T14:00:00.027Z",
-      "nextRun": "2026-05-01T14:30:00.000Z"
+      "lastRun": "2026-05-01T14:30:00.025Z",
+      "nextRun": "2026-05-01T15:00:00.000Z"
     }
   ],
   "version": 1

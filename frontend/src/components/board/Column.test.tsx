@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { Column } from './Column'
 import { Column as ColumnType, Task } from '../../lib/api'
@@ -88,5 +88,48 @@ describe('Column', () => {
     )
     const rule = container.querySelector('.border-b.border-ink3')
     expect(rule).toBeInTheDocument()
+  })
+
+  it('renders collapse button for collapsible column', () => {
+    renderWithRouter(
+      <Column
+        column={mockColumn}
+        tasks={mockTasks}
+        isCollapsible={true}
+        isCollapsed={false}
+        onToggleCollapse={() => {}}
+      />
+    )
+    expect(screen.getByRole('button')).toBeInTheDocument()
+  })
+
+  it('hides tasks when column is collapsed', () => {
+    renderWithRouter(
+      <Column
+        column={mockColumn}
+        tasks={mockTasks}
+        isCollapsible={true}
+        isCollapsed={true}
+        onToggleCollapse={() => {}}
+      />
+    )
+    expect(screen.queryByText('TASK-001')).not.toBeInTheDocument()
+    expect(screen.queryByText('TASK-002')).not.toBeInTheDocument()
+  })
+
+  it('calls onToggleCollapse when collapse button is clicked', () => {
+    const onToggleCollapse = vi.fn()
+    renderWithRouter(
+      <Column
+        column={mockColumn}
+        tasks={mockTasks}
+        isCollapsible={true}
+        isCollapsed={false}
+        onToggleCollapse={onToggleCollapse}
+      />
+    )
+    const button = screen.getByRole('button')
+    fireEvent.click(button)
+    expect(onToggleCollapse).toHaveBeenCalledTimes(1)
   })
 })

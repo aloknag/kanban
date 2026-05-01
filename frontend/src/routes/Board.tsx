@@ -6,6 +6,8 @@
  * - Fetches columns and tasks from API
  * - Shows loading and error states
  * - Uses the Plate layout with TopRule chrome
+ * - Done column is collapsed by default with localStorage persistence
+ * - Columns sorted with Done forced to bottom
  */
 
 import { useEffect, useState } from 'react'
@@ -19,6 +21,18 @@ export function Board() {
   const [recentlyUpdatedTaskIds, setRecentlyUpdatedTaskIds] = useState<
     Set<number>
   >(new Set())
+  const [collapsedColumns, setCollapsedColumns] = useState<Set<number>>(() => {
+    // Load collapsed columns from localStorage
+    try {
+      const stored = localStorage.getItem('collapsed_columns')
+      if (stored) {
+        return new Set(JSON.parse(stored))
+      }
+    } catch (e) {
+      console.error('Failed to parse collapsed_columns from localStorage', e)
+    }
+    return new Set()
+  })
 
   // Fetch columns
   const {
@@ -81,6 +95,36 @@ export function Board() {
     return () => clearInterval(interval)
   }, [tasks])
 
+  // Ensure Done column is in collapsed set on initial load
+  useEffect(() => {
+    if (columns.length > 0) {
+      const doneColumn = columns.find(c => c.name === 'Done')
+      if (doneColumn && !collapsedColumns.has(doneColumn.id)) {
+        setCollapsedColumns(prev => new Set([...prev, doneColumn.id]))
+      }
+    }
+  }, [columns])
+
+  // Sort columns: Done forced to bottom
+  const sortedColumns = [
+    ...columns.filter(c => c.name !== 'Done').sort((a, b) => a.position - b.position),
+    ...columns.filter(c => c.name === 'Done'),
+  ]
+
+  const handleToggleCollapse = (columnId: number) => {
+    setCollapsedColumns(prev => {
+      const next = new Set(prev)
+      if (next.has(columnId)) {
+        next.delete(columnId)
+      } else {
+        next.add(columnId)
+      }
+      // Persist to localStorage
+      localStorage.setItem('collapsed_columns', JSON.stringify([...next]))
+      return next
+    })
+  }
+
   const isLoading = columnsLoading || tasksLoading
   const error = columnsError || tasksError
 
@@ -109,16 +153,21 @@ export function Board() {
           )}
 
           {/* Board content */}
-          {!isLoading && columns.length > 0 && (
+          {!isLoading && sortedColumns.length > 0 && (
             <div data-testid="board-content">
-              {columns.map(column => {
+              {sortedColumns.map(column => {
                 const columnTasks = tasks.filter(t => t.column_id === column.id)
+                const isCollapsible = column.name === 'Done'
+                const isCollapsed = collapsedColumns.has(column.id)
                 return (
                   <Column
                     key={column.id}
                     column={column}
                     tasks={columnTasks}
                     recentlyUpdatedTaskIds={recentlyUpdatedTaskIds}
+                    isCollapsible={isCollapsible}
+                    isCollapsed={isCollapsed}
+                    onToggleCollapse={() => handleToggleCollapse(column.id)}
                     data-testid="column"
                   />
                 )
@@ -127,7 +176,7 @@ export function Board() {
           )}
 
           {/* Empty board state */}
-          {!isLoading && columns.length === 0 && (
+          {!isLoading && sortedColumns.length === 0 && (
             <div className="text-center py-page">
               <p className="text-display text-ink3">◇</p>
               <p className="text-h2 text-ink mt-page">no board found</p>
@@ -141,4 +190,3 @@ export function Board() {
     </div>
   )
 }
-
