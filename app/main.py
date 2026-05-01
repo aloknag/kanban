@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 from app.database import init_database
-from app.paths import validate_content_path, read_content
+from app.paths import validate_content_path, read_content, get_excerpt_cached
 
 
 def create_app(data_folder: Path) -> FastAPI:
@@ -110,24 +110,26 @@ def create_app(data_folder: Path) -> FastAPI:
 
     @app.get("/api/tasks")
     async def list_tasks():
-        """List all tasks."""
+        """List all tasks with excerpt field."""
         db = await get_db()
         try:
             cursor = await db.execute(
-                "SELECT id, slug, title, assignee, column_id, epic_id FROM tasks ORDER BY created_at DESC"
+                "SELECT id, slug, title, content_path, assignee, column_id, epic_id FROM tasks ORDER BY created_at DESC"
             )
             rows = await cursor.fetchall()
-            return [
-                {
+            result = []
+            for row in rows:
+                excerpt = get_excerpt_cached(row[3], data_folder)
+                result.append({
                     "id": row[0],
                     "slug": row[1],
                     "title": row[2],
-                    "assignee": row[3],
-                    "column_id": row[4],
-                    "epic_id": row[5],
-                }
-                for row in rows
-            ]
+                    "assignee": row[4],
+                    "column_id": row[5],
+                    "epic_id": row[6],
+                    "excerpt": excerpt,
+                })
+            return result
         finally:
             await db.close()
 
@@ -176,7 +178,7 @@ def create_app(data_folder: Path) -> FastAPI:
 
     @app.get("/api/tasks/{task_id}")
     async def get_task(task_id: int):
-        """Get task detail with content."""
+        """Get task detail with content and excerpt."""
         db = await get_db()
         try:
             cursor = await db.execute(
@@ -188,6 +190,7 @@ def create_app(data_folder: Path) -> FastAPI:
                 return {"error": "Not found"}, 404
 
             content, content_error = read_content(row[3], data_folder)
+            excerpt = get_excerpt_cached(row[3], data_folder)
 
             result = {
                 "id": row[0],
@@ -195,6 +198,7 @@ def create_app(data_folder: Path) -> FastAPI:
                 "title": row[2],
                 "content_path": row[3],
                 "content": content,
+                "excerpt": excerpt,
                 "assignee": row[4],
                 "column_id": row[5],
                 "epic_id": row[6],
@@ -260,16 +264,17 @@ def create_app(data_folder: Path) -> FastAPI:
 
     @app.get("/api/epics")
     async def list_epics():
-        """List all epics."""
+        """List all epics with excerpt field."""
         db = await get_db()
         try:
             cursor = await db.execute(
-                "SELECT id, slug, title, assignee, column_id FROM epics ORDER BY created_at DESC"
+                "SELECT id, slug, title, content_path, assignee, column_id FROM epics ORDER BY created_at DESC"
             )
             rows = await cursor.fetchall()
             result = []
             for row in rows:
                 epic_id = row[0]
+                excerpt = get_excerpt_cached(row[3], data_folder)
                 # Get task count
                 task_cursor = await db.execute(
                     "SELECT COUNT(*) FROM tasks WHERE epic_id = ?",
@@ -288,10 +293,11 @@ def create_app(data_folder: Path) -> FastAPI:
                     "id": epic_id,
                     "slug": row[1],
                     "title": row[2],
-                    "assignee": row[3],
-                    "column_id": row[4],
+                    "assignee": row[4],
+                    "column_id": row[5],
                     "task_count": task_count,
                     "done_count": done_count,
+                    "excerpt": excerpt,
                 })
             return result
         finally:
@@ -342,7 +348,7 @@ def create_app(data_folder: Path) -> FastAPI:
 
     @app.get("/api/epics/{epic_id}")
     async def get_epic(epic_id: int):
-        """Get epic detail with content."""
+        """Get epic detail with content and excerpt."""
         db = await get_db()
         try:
             cursor = await db.execute(
@@ -354,6 +360,7 @@ def create_app(data_folder: Path) -> FastAPI:
                 return {"error": "Not found"}, 404
 
             content, content_error = read_content(row[3], data_folder)
+            excerpt = get_excerpt_cached(row[3], data_folder)
 
             result = {
                 "id": row[0],
@@ -361,6 +368,7 @@ def create_app(data_folder: Path) -> FastAPI:
                 "title": row[2],
                 "content_path": row[3],
                 "content": content,
+                "excerpt": excerpt,
                 "assignee": row[4],
                 "column_id": row[5],
                 "created_at": row[6],
