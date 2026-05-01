@@ -10,6 +10,9 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@fontsource-variable/newsreader": "^5.0.0",
+    "@fontsource-variable/geist": "^5.0.0",
+    "@fontsource-variable/jetbrains-mono": "^5.0.0",
     "react": "^19.0.0-beta",
     "react-dom": "^19.0.0-beta",
     "react-router-dom": "^6.20.0",

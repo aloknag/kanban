@@ -1,0 +1,49 @@
+@import '@fontsource-variable/newsreader/index.css';
+@import '@fontsource-variable/geist/index.css';
+@import '@fontsource-variable/jetbrains-mono/index.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --c-paper:   #F8F6F1;
+  --c-paper-2: #F2EFE7;
+  --c-card:    #FFFFFF;
+  --c-ink:     #11151C;
+  --c-ink-2:   rgba(17, 21, 28, .64);
+  --c-ink-3:   rgba(17, 21, 28, .36);
+  --c-ink-4:   rgba(17, 21, 28, .12);
+  --c-signal:  #B6451E;
+  --c-signal-ink: #FFFFFF;
+  --c-data-cool: #22467A;
+  --c-warn:    #7A4A05;
+
+  --f-display: '"Newsreader Variable", serif';
+  --f-body:    '"Geist Variable", system-ui, sans-serif';
+  --f-mono:    '"JetBrains Mono Variable", ui-monospace, monospace';
+}
+
+[data-theme='dark'] {
+  --c-paper:   #0E0F11;
+  --c-paper-2: #16181B;
+  --c-card:    #1A1C1F;
+  --c-ink:     #EDE8DA;
+  --c-ink-2:   rgba(237, 232, 218, .64);
+  --c-ink-3:   rgba(237, 232, 218, .36);
+  --c-ink-4:   rgba(237, 232, 218, .12);
+  --c-signal:  #D87644;
+  --c-signal-ink: #0E0F11;
+  --c-data-cool: #7AA7D9;
+  --c-warn:    #D9A14A;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+html { background: var(--c-paper); color: var(--c-ink); }
+body { font-family: var(--f-body); font-feature-settings: 'ss01', 'cv11'; }
