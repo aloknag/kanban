@@ -1,6 +1,8 @@
 import { createBrowserRouter, Navigate, RouteObject } from 'react-router-dom'
 import { Board } from '../routes/Board'
 import { Epics } from '../routes/Epics'
+import { TaskDetail } from '../routes/TaskDetail'
+import { EpicDetail } from '../routes/EpicDetail'
 
 export const routes: RouteObject[] = [
   {
@@ -14,6 +16,14 @@ export const routes: RouteObject[] = [
   {
     path: '/epics',
     element: <Epics />,
+  },
+  {
+    path: '/tasks/:id',
+    element: <TaskDetail />,
+  },
+  {
+    path: '/epics/:id',
+    element: <EpicDetail />,
   },
   {
     path: '*',
