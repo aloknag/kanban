@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv
+.env
+.env.local
+*.egg-info/
+dist/
+build/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+.DS_Store
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+frontend/*.local
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+kanban.db-*
+
+# Build
+app/static/
+dist/
+
+# OS
+Thumbs.db
+.DS_Store

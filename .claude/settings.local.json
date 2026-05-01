@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python *)",
+      "Bash(uv sync *)",
+      "Skill(update-config)",
+      "Bash(.venv/Scripts/python *)"
+    ]
+  }
+}
