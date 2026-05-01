@@ -8,7 +8,7 @@ from app.database import init_database
 
 @pytest.mark.asyncio
 async def test_get_columns_returns_bootstrap_data():
-    """GET /api/columns returns the three bootstrap columns."""
+    """GET /api/columns returns the three bootstrap columns with task_count."""
     with tempfile.TemporaryDirectory() as tmpdir:
         data_folder = Path(tmpdir)
         await init_database(data_folder)
@@ -22,10 +22,13 @@ async def test_get_columns_returns_bootstrap_data():
             assert len(columns) == 3
             assert columns[0]["name"] == "Todo"
             assert columns[0]["position"] == 0
+            assert columns[0]["task_count"] == 0
             assert columns[1]["name"] == "In Progress"
             assert columns[1]["position"] == 1
+            assert columns[1]["task_count"] == 0
             assert columns[2]["name"] == "Done"
             assert columns[2]["position"] == 2
+            assert columns[2]["task_count"] == 0
 
 
 @pytest.mark.asyncio
@@ -143,3 +146,99 @@ async def test_reorder_columns():
             assert columns[1]["position"] == 1
             assert columns[2]["id"] == ids[0]  # Todo third
             assert columns[2]["position"] == 2
+
+
+@pytest.mark.asyncio
+async def test_get_columns_task_count_with_non_epic_tasks():
+    """GET /api/columns includes task_count for non-epic tasks."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            # Get Todo column ID
+            list_response = await client.get("/api/columns")
+            columns = list_response.json()
+            todo_id = columns[0]["id"]
+
+            # Create a non-epic task in Todo
+            await client.post(
+                "/api/tasks",
+                json={
+                    "title": "Test Task 1",
+                    "content_path": "tasks/test1.md",
+                    "column_id": todo_id,
+                }
+            )
+
+            # Create another non-epic task in Todo
+            await client.post(
+                "/api/tasks",
+                json={
+                    "title": "Test Task 2",
+                    "content_path": "tasks/test2.md",
+                    "column_id": todo_id,
+                }
+            )
+
+            # Get columns and verify task_count
+            list_response = await client.get("/api/columns")
+            columns = list_response.json()
+            todo_column = next(c for c in columns if c["id"] == todo_id)
+
+            assert todo_column["task_count"] == 2
+
+
+@pytest.mark.asyncio
+async def test_get_columns_task_count_excludes_epic_tasks():
+    """GET /api/columns task_count excludes tasks with epic_id."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            # Get Todo column ID
+            list_response = await client.get("/api/columns")
+            columns = list_response.json()
+            todo_id = columns[0]["id"]
+
+            # Create an epic
+            epic_response = await client.post(
+                "/api/epics",
+                json={
+                    "title": "Test Epic",
+                    "content_path": "epics/test.md",
+                    "column_id": todo_id,
+                }
+            )
+            epic_id = epic_response.json()["id"]
+
+            # Create a non-epic task
+            await client.post(
+                "/api/tasks",
+                json={
+                    "title": "Non-Epic Task",
+                    "content_path": "tasks/test1.md",
+                    "column_id": todo_id,
+                }
+            )
+
+            # Create an epic task
+            await client.post(
+                "/api/tasks",
+                json={
+                    "title": "Epic Task",
+                    "content_path": "tasks/test2.md",
+                    "column_id": todo_id,
+                    "epic_id": epic_id,
+                }
+            )
+
+            # Get columns and verify task_count only counts non-epic tasks
+            list_response = await client.get("/api/columns")
+            columns = list_response.json()
+            todo_column = next(c for c in columns if c["id"] == todo_id)
+
+            assert todo_column["task_count"] == 1  # Only the non-epic task

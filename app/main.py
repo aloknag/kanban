@@ -3,9 +3,11 @@ from pathlib import Path
 import aiosqlite
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from typing import List, cast
 
 from app.database import init_database
 from app.paths import validate_content_path, read_content, get_excerpt_cached
+from app.models import ColumnResponse
 
 
 def create_app(data_folder: Path) -> FastAPI:
@@ -23,20 +25,31 @@ def create_app(data_folder: Path) -> FastAPI:
         db = await aiosqlite.connect(str(data_folder / "kanban.db"))
         return db
 
-    @app.get("/api/columns")
+    @app.get("/api/columns", response_model=List[ColumnResponse])
     async def list_columns():
-        """List all columns."""
+        """List all columns with task count."""
         db = await get_db()
         try:
             cursor = await db.execute(
-                "SELECT id, name, position FROM columns ORDER BY position"
+                """SELECT 
+                    c.id, c.name, c.position,
+                    COUNT(t.id) as task_count
+                FROM columns c
+                LEFT JOIN tasks t ON c.id = t.column_id AND t.epic_id IS NULL
+                GROUP BY c.id, c.name, c.position
+                ORDER BY c.position"""
             )
             rows = await cursor.fetchall()
-            return [{"id": row[0], "name": row[1], "position": row[2]} for row in rows]
+            return [ColumnResponse(
+                id=row[0],
+                name=row[1],
+                position=row[2],
+                task_count=row[3]
+            ) for row in rows]
         finally:
             await db.close()
 
-    @app.post("/api/columns", status_code=201)
+    @app.post("/api/columns", status_code=201, response_model=ColumnResponse)
     async def create_column(body: dict):
         """Create a new column."""
         db = await get_db()
@@ -53,8 +66,8 @@ def create_app(data_folder: Path) -> FastAPI:
             )
             await db.commit()
 
-            column_id = cursor.lastrowid
-            return {"id": column_id, "name": body["name"], "position": next_position}
+            column_id = cast(int, cursor.lastrowid)
+            return ColumnResponse(id=column_id, name=body["name"], position=next_position, task_count=0)
         finally:
             await db.close()
 
@@ -74,7 +87,7 @@ def create_app(data_folder: Path) -> FastAPI:
         finally:
             await db.close()
 
-    @app.patch("/api/columns/{column_id}")
+    @app.patch("/api/columns/{column_id}", response_model=ColumnResponse)
     async def update_column(column_id: int, body: dict):
         """Update a column."""
         db = await get_db()
@@ -87,14 +100,19 @@ def create_app(data_folder: Path) -> FastAPI:
                 await db.commit()
 
             cursor = await db.execute(
-                "SELECT id, name, position FROM columns WHERE id = ?",
+                """SELECT c.id, c.name, c.position,
+                       COUNT(t.id) as task_count
+                FROM columns c
+                LEFT JOIN tasks t ON c.id = t.column_id AND t.epic_id IS NULL
+                WHERE c.id = ?
+                GROUP BY c.id, c.name, c.position""",
                 (column_id,)
             )
             row = await cursor.fetchone()
             if not row:
-                return {"error": "Not found"}, 404
+                raise HTTPException(status_code=404, detail="Not found")
 
-            return {"id": row[0], "name": row[1], "position": row[2]}
+            return ColumnResponse(id=row[0], name=row[1], position=row[2], task_count=row[3])
         finally:
             await db.close()
 
