@@ -15,4 +15,9 @@ export default defineConfig({
     outDir: '../app/static',
     emptyOutDir: true,
   },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./vitest.setup.ts'],
+  },
 })
