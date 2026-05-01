@@ -258,14 +258,14 @@ describe('Markdown component', () => {
     it('maintains stable figure numbers across component re-renders with same source', () => {
       const source = '```mermaid\ngraph TD\nA[Start]\n```\n\n```mermaid\ngraph TD\nB[End]\n```'
       const { container, rerender } = render(<Markdown source={source} />)
-      expect(container.textContent).toContain('Fig. 1')
-      expect(container.textContent).toContain('Fig. 2')
+      expect(container.textContent).toContain('FIG. 1')
+      expect(container.textContent).toContain('FIG. 2')
 
       // Re-render the same content - counters should reset
       rerender(<Markdown source={source} />)
-      // Should still be Fig. 1 and Fig. 2 with fresh counters
-      expect(container.textContent).toContain('Fig. 1')
-      expect(container.textContent).toContain('Fig. 2')
+      // Should still be FIG. 1 and FIG. 2 with fresh counters
+      expect(container.textContent).toContain('FIG. 1')
+      expect(container.textContent).toContain('FIG. 2')
     })
 
     it('renders mermaid code blocks as MermaidBlock component', () => {
@@ -281,18 +281,18 @@ describe('Markdown component', () => {
       const { container } = render(<Markdown source={source} />)
       const mermaidBlocks = container.querySelectorAll('[data-mermaid]')
       expect(mermaidBlocks.length).toBe(2)
-      // Check for Fig. 1 and Fig. 2
-      expect(container.textContent).toContain('Fig. 1')
-      expect(container.textContent).toContain('Fig. 2')
+      // Check for FIG. 1 and FIG. 2 (uppercase per label typography spec)
+      expect(container.textContent).toContain('FIG. 1')
+      expect(container.textContent).toContain('FIG. 2')
     })
 
-    it('captions mermaid diagrams as Fig. N in mono label', () => {
+    it('captions mermaid diagrams as FIG. N in mono label (uppercase)', () => {
       const source = '```mermaid\ngraph TD\nA[Start]\n```'
       const { container } = render(<Markdown source={source} />)
       const caption = container.querySelector('[data-figure-caption]')
       expect(caption).toBeInTheDocument()
       expect(caption?.className).toContain('font-mono')
-      expect(caption?.textContent).toContain('Fig. 1')
+      expect(caption?.textContent).toContain('FIG. 1')
     })
   })
 })

@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Components } from 'react-markdown'
 import type { Element as HastElement } from 'hast'
+import { MermaidBlock } from './MermaidBlock'
 
 interface MarkdownProps {
   source: string
@@ -43,18 +44,6 @@ function InlineCode({ children }: PropsWithChildren) {
   )
 }
 
-// Mermaid block placeholder component
-function MermaidBlock({ code, figureNumber }: { code: string; figureNumber: number }) {
-  return (
-    <div data-mermaid data-figure={figureNumber} className="border border-hair border-ink3 p-card mb-card">
-      <div className="font-mono text-meta text-ink3 mb-snug">Diagram {figureNumber}</div>
-      <pre className="font-mono text-bodysm">{code}</pre>
-      <div data-figure-caption className="text-right text-meta text-ink3 mt-snug font-mono">
-        Fig. {figureNumber}
-      </div>
-    </div>
-  )
-}
 
 export function Markdown({ source }: MarkdownProps) {
   // Track h1 count and figure count during parsing
