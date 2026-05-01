@@ -143,6 +143,8 @@ Path("/data/tasks/setup.md").write_text("# Setup DB schema\n... updated ...")
 
 ## Testing
 
+### Backend Tests
+
 **Linux/macOS:**
 ```bash
 # Run all tests
@@ -184,6 +186,46 @@ make lint-fix
 - All CRUD operations (Columns, Tasks, Epics, Comments)
 - Content reading and error handling (missing files)
 - Path security (traversal, absolute paths, symlinks)
+
+### E2E Tests (Playwright)
+
+**Prerequisites:** Backend must be running with an empty data folder.
+
+**Terminal 1 — Start the backend:**
+```bash
+# Linux/macOS:
+DATA_DIR=/tmp/e2e-data .venv/Scripts/python -m app serve --folder /tmp/e2e-data --port 8000
+
+# Windows (PowerShell):
+$env:DATA_DIR = 'C:\tmp\e2e-data'
+.venv\Scripts\python -m app serve --folder C:\tmp\e2e-data --port 8000
+```
+
+**Terminal 2 — Run E2E tests:**
+```bash
+cd frontend
+
+# Run all E2E tests
+npm run e2e
+
+# Run specific E2E test
+npm run e2e -- poll-delivers-new-card
+
+# Run in UI mode (interactive)
+npm run e2e:ui
+
+# Run in headed mode (see browser)
+npm run e2e -- --headed
+
+# Debug with inspector
+npm run e2e:debug
+```
+
+**E2E Test Coverage:**
+- Poll delivers new card within 6s with signal rule
+- Board loads and displays columns
+- Column headers visible and interactive
+- Responsive design on mobile viewport
 
 ## Development
 

@@ -34,4 +34,7 @@ export default defineConfig({
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
   },
+
+  // Note: Backend is expected to be running separately at http://localhost:8000
+  // Start with: DATA_DIR=/tmp/e2e .venv/Scripts/python -m app serve --folder /tmp/e2e --port 8000
 });
