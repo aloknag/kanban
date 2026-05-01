@@ -38,6 +38,19 @@
   --c-warn:    #D9A14A;
 }
 
+@keyframes fade-signal {
+  from {
+    box-shadow: inset 1px 0 0 var(--c-signal);
+  }
+  to {
+    box-shadow: inset 1px 0 0 var(--c-ink-4);
+  }
+}
+
+[data-new] {
+  animation: fade-signal 8s linear forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

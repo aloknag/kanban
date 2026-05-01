@@ -5,7 +5,8 @@
  * - Displays task metadata (ID, epic link, assignee, timestamp)
  * - Renders title and excerpt
  * - Shows "new" indicator if recently updated (within 8 seconds)
- * - 1px ruled border, no shadow
+ * - 1px ruled border, no shadow (except data-new fade animation)
+ * - No forbidden classes: shadow-, rounded-*, transform, scale-, backdrop-blur
  */
 
 import { Link } from 'react-router-dom'
@@ -22,14 +23,7 @@ export function TaskCard({ task, isNew = false }: Props) {
       data-task-id={task.id}
       data-new={isNew || undefined}
       aria-labelledby={`task-${task.id}-title`}
-      className={[
-        'group relative bg-card border-hair border-ink3',
-        'p-card transition-colors duration-fast',
-        'hover:border-ink',
-        isNew && 'shadow-[inset_1px_0_0_var(--c-signal)]',
-      ]
-        .filter(Boolean)
-        .join(' ')}
+      className="group relative bg-card border-hair border-ink3 p-card transition-colors duration-fast hover:border-ink"
     >
       {/* Meta row: ID, epic, assignee, timestamp */}
       <header className="flex items-baseline gap-tight text-meta font-mono text-ink3 flex-wrap">
@@ -37,7 +31,12 @@ export function TaskCard({ task, isNew = false }: Props) {
         {task.epic_id && (
           <>
             <span aria-hidden="true">·</span>
-            <span className="text-ink2">EPIC-{task.epic_id}</span>
+            <Link
+              to={`/epics/${task.epic_id}`}
+              className="text-ink2 hover:text-ink hover:underline underline-offset-2"
+            >
+              EPIC-{String(task.epic_id).padStart(3, '0')}
+            </Link>
           </>
         )}
         {task.assignee && (
