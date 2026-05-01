@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
@@ -163,6 +163,77 @@ describe('Board', () => {
         const inProgressSection = screen.getByText('IN PROGRESS')
         expect(inProgressSection).toBeInTheDocument()
       })
+    })
+  })
+
+  describe('isNew computation with aging', () => {
+    it('passes isNew=true for tasks updated within 8 seconds', async () => {
+      const now = Date.now()
+      const tasksWithNewOne = [
+        {
+          id: 1,
+          slug: 'TASK-001',
+          title: 'Recent task',
+          excerpt: 'Updated 5 seconds ago',
+          assignee: 'agent-1',
+          column_id: 1,
+          epic_id: null,
+          updated_at: new Date(now - 5000).toISOString(), // 5 seconds ago
+        },
+        {
+          id: 2,
+          slug: 'TASK-002',
+          title: 'Old task',
+          excerpt: 'Updated 10 seconds ago',
+          assignee: 'agent-2',
+          column_id: 2,
+          epic_id: null,
+          updated_at: new Date(now - 10000).toISOString(), // 10 seconds ago (outside 8s window)
+        },
+      ]
+
+      vi.mocked(api.getColumns).mockResolvedValue(mockColumns)
+      vi.mocked(api.getTasks).mockResolvedValue(tasksWithNewOne)
+
+      renderWithProviders(<Board />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Recent task')).toBeInTheDocument()
+      })
+
+      // Task 1 (5s ago) should have data-new attribute (within 8s window)
+      const recentCard = screen.getByText('Recent task').closest('[data-task-id]')
+      expect(recentCard).toHaveAttribute('data-new')
+
+      // Task 2 (10s ago) should NOT have data-new attribute (outside 8s window)
+      const oldCard = screen.getByText('Old task').closest('[data-task-id]')
+      expect(oldCard).not.toHaveAttribute('data-new')
+    })
+
+    it('does not display isNew for very old tasks', async () => {
+      const now = Date.now()
+      const veryOldTask = {
+        id: 1,
+        slug: 'TASK-001',
+        title: 'Ancient task',
+        excerpt: 'Updated 1 minute ago',
+        assignee: 'agent-1',
+        column_id: 1,
+        epic_id: null,
+        updated_at: new Date(now - 60000).toISOString(), // 60 seconds ago
+      }
+
+      vi.mocked(api.getColumns).mockResolvedValue(mockColumns)
+      vi.mocked(api.getTasks).mockResolvedValue([veryOldTask])
+
+      renderWithProviders(<Board />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Ancient task')).toBeInTheDocument()
+      })
+
+      const card = screen.getByText('Ancient task').closest('[data-task-id]')
+      expect(card).not.toHaveAttribute('data-new')
     })
   })
 
