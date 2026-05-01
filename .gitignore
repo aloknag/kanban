@@ -17,6 +17,9 @@ build/
 .pytest_cache/
 .coverage
 htmlcov/
+test-results/
+playwright-report/
+.auth/
 
 # IDE
 .vscode/
