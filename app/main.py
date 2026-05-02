@@ -77,6 +77,27 @@ def create_app(data_folder: Path) -> FastAPI:
         db = await get_db()
         try:
             ids = body.get("ids", [])
+
+            # Validate: must contain exactly the set of all existing column IDs
+            cursor = await db.execute("SELECT id FROM columns")
+            all_column_ids = set(row[0] for row in await cursor.fetchall())
+            provided_ids = set(ids)
+
+            # Check that provided IDs match exactly the columns in the database
+            if provided_ids != all_column_ids:
+                missing_ids = all_column_ids - provided_ids
+                extra_ids = provided_ids - all_column_ids
+                detail_parts = []
+                if missing_ids:
+                    detail_parts.append(f"missing columns: {sorted(missing_ids)}")
+                if extra_ids:
+                    detail_parts.append(f"invalid columns: {sorted(extra_ids)}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Reorder must include all columns. {'; '.join(detail_parts)}"
+                )
+
+            # Update positions for each column
             for position, column_id in enumerate(ids):
                 await db.execute(
                     "UPDATE columns SET position = ? WHERE id = ?",

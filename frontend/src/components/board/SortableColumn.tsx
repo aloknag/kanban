@@ -24,6 +24,7 @@ type Props = {
   isCollapsible?: boolean
   isCollapsed?: boolean
   onToggleCollapse?: () => void
+  'data-testid'?: string
 }
 
 export function SortableColumn({
@@ -34,6 +35,7 @@ export function SortableColumn({
   isCollapsible = false,
   isCollapsed = false,
   onToggleCollapse,
+  'data-testid': testid,
 }: Props) {
   const {
     attributes,
@@ -56,6 +58,7 @@ export function SortableColumn({
       data-column-id={column.id}
       className="mb-gutter"
       data-collapsed={isCollapsed || undefined}
+      data-testid={testid}
     >
       <ColumnHeader
         column={column}

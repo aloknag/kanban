@@ -26,6 +26,8 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  type Announcements,
+  type ScreenReaderInstructions,
 } from '@dnd-kit/core'
 import {
   arrayMove,
@@ -66,8 +68,13 @@ export function Board() {
     }
     return new Set()
   })
+
+  // HotkeyProvider state (task #30)
   const [focusedCardId, setFocusedCardId] = useState<number | null>(null)
   const [keyboardSheetOpen, setKeyboardSheetOpen] = useState(false)
+
+  // DnD column reorder state (task #28)
+  const [isReorderInFlight, setIsReorderInFlight] = useState(false)
 
   // Set up DnD sensors for pointer and keyboard
   const sensors = useSensors(
@@ -76,6 +83,46 @@ export function Board() {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   )
+
+  // Accessibility announcements for screen readers (FrontEngDesign §14)
+  const announcements: Announcements = {
+    onDragStart({ active }) {
+      const column = columns.find(c => c.id === active.id)
+      return column ? `Started dragging column ${column.name}` : undefined
+    },
+    onDragMove({ active, over }) {
+      const column = columns.find(c => c.id === active.id)
+      const overColumn = columns.find(c => c.id === over?.id)
+      if (column && overColumn) {
+        return `Dragging column ${column.name} over ${overColumn.name}`
+      }
+      return undefined
+    },
+    onDragOver({ active, over }) {
+      const column = columns.find(c => c.id === active.id)
+      const overColumn = columns.find(c => c.id === over?.id)
+      if (column && overColumn) {
+        return `Moving column ${column.name} before ${overColumn.name}`
+      }
+      return undefined
+    },
+    onDragEnd({ active, over }) {
+      const column = columns.find(c => c.id === active.id)
+      const overColumn = columns.find(c => c.id === over?.id)
+      if (column && overColumn) {
+        return `Successfully moved column ${column.name} to position before ${overColumn.name}`
+      }
+      return column ? `Column ${column.name} reorder completed` : undefined
+    },
+    onDragCancel({ active }) {
+      const column = columns.find(c => c.id === active.id)
+      return column ? `Cancelled dragging column ${column.name}` : undefined
+    },
+  }
+
+  const screenReaderInstructions: ScreenReaderInstructions = {
+    draggable: 'Press space or enter to drag columns. Use arrow keys to move. Press escape to cancel.',
+  }
 
   // Fetch columns
   const {
@@ -153,7 +200,7 @@ export function Board() {
         setCollapsedColumns(prev => new Set([...prev, doneColumn.id]))
       }
     }
-  }, [columns])
+  }, [columns, collapsedColumns])
 
   // Sort columns: Done forced to bottom
   const sortedColumns = [
@@ -180,6 +227,12 @@ export function Board() {
     (event: DragEndEvent) => {
       const { active, over } = event
 
+      // Prevent concurrent drags while a PATCH is in-flight
+      if (isReorderInFlight) {
+        console.warn('Column reorder in progress — ignoring concurrent drag')
+        return
+      }
+
       if (!over || active.id === over.id) {
         return
       }
@@ -205,13 +258,21 @@ export function Board() {
       // Optimistic update: update React Query cache immediately
       queryClient.setQueryData(['columns'], newColumns)
 
+      // Set in-flight flag to prevent concurrent drags
+      setIsReorderInFlight(true)
+
       // Call API
-      patchColumnsReorder(newIds).catch(() => {
-        // On error, refetch to get the true state
-        queryClient.invalidateQueries({ queryKey: ['columns'] })
-      })
+      patchColumnsReorder(newIds)
+        .catch(() => {
+          // On error, refetch to get the true state
+          queryClient.invalidateQueries({ queryKey: ['columns'] })
+        })
+        .finally(() => {
+          // Clear in-flight flag when API call completes (success or error)
+          setIsReorderInFlight(false)
+        })
     },
-    [sortedColumns, columns, queryClient]
+    [sortedColumns, columns, queryClient, isReorderInFlight]
   )
 
   const isLoading = columnsLoading || tasksLoading
@@ -308,6 +369,10 @@ export function Board() {
               sensors={sensors}
               collisionDetection={closestCenter}
               onDragEnd={handleDragEnd}
+              accessibility={{
+                announcements,
+                screenReaderInstructions,
+              }}
             >
               <SortableContext
                 items={sortedColumns.map(c => c.id)}

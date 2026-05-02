@@ -124,4 +124,34 @@ describe('ColumnHeader DnD', () => {
     const header = container.querySelector('header')
     expect(header).toHaveStyle('opacity: 0.85')
   })
+
+  it('accepts properly typed DnD attributes and listeners from useSortable', () => {
+    // Test that dndAttributes and dndListeners can be passed with correct types
+    // This verifies TypeScript strict mode compliance.
+    // Prior: Record<string, any> violated strict mode
+    // Fixed: Use DraggableAttributes and SyntheticListenerMap from @dnd-kit/core
+
+    const { container } = render(
+      <ColumnHeader
+        column={mockColumn}
+        taskCount={3}
+        isDraggable={true}
+        isDragging={false}
+        dndAttributes={{
+          role: 'button',
+          tabIndex: 0,
+          'aria-disabled': false,
+          'aria-pressed': undefined,
+          'aria-roledescription': 'draggable',
+          'aria-describedby': 'desc-1',
+        }}
+        dndListeners={{
+          onPointerDown: () => {},
+          onKeyDown: () => {},
+        }}
+      />
+    )
+    const header = container.querySelector('header')
+    expect(header).toBeInTheDocument()
+  })
 })

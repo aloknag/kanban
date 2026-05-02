@@ -242,3 +242,55 @@ async def test_get_columns_task_count_excludes_epic_tasks():
             todo_column = next(c for c in columns if c["id"] == todo_id)
 
             assert todo_column["task_count"] == 1  # Only the non-epic task
+
+
+@pytest.mark.asyncio
+async def test_reorder_columns_rejects_partial_id_list():
+    """PATCH /api/columns/reorder rejects incomplete ID lists."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            # Get column IDs
+            list_response = await client.get("/api/columns")
+            columns = list_response.json()
+            ids = [c["id"] for c in columns]
+
+            # Try to reorder with only 2 out of 3 columns
+            # This should be rejected as it's not a valid reorder of all columns
+            response = await client.patch(
+                "/api/columns/reorder",
+                json={"ids": [ids[0], ids[1]]}  # Missing ids[2]
+            )
+
+            assert response.status_code == 400
+            error = response.json()
+            assert "detail" in error
+            assert "all columns" in error.get("detail", "").lower()
+
+
+@pytest.mark.asyncio
+async def test_reorder_columns_rejects_invalid_ids():
+    """PATCH /api/columns/reorder rejects lists with non-existent IDs."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            # Get column IDs
+            list_response = await client.get("/api/columns")
+            columns = list_response.json()
+            ids = [c["id"] for c in columns]
+
+            # Try to reorder with a non-existent ID
+            response = await client.patch(
+                "/api/columns/reorder",
+                json={"ids": [ids[0], ids[1], ids[2], 99999]}  # 99999 doesn't exist
+            )
+
+            assert response.status_code == 400
+            error = response.json()
+            assert "detail" in error

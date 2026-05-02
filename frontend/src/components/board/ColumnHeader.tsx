@@ -13,6 +13,8 @@
  */
 
 import { CSSProperties } from 'react'
+import { DraggableAttributes } from '@dnd-kit/core'
+import type { SyntheticListenerMap } from '@dnd-kit/core/dist/hooks/utilities'
 import { Column } from '../../lib/api'
 
 type Props = {
@@ -23,8 +25,8 @@ type Props = {
   onToggleCollapse?: () => void
   isDraggable?: boolean
   isDragging?: boolean
-  dndAttributes?: Record<string, any>
-  dndListeners?: Record<string, any>
+  dndAttributes?: DraggableAttributes
+  dndListeners?: SyntheticListenerMap
   style?: CSSProperties
 }
 

@@ -150,6 +150,24 @@ describe('SortableColumn', () => {
     expect(screen.queryByText('Test task')).not.toBeInTheDocument()
   })
 
+  it('forwards data-testid prop to the section element', () => {
+    // Issue: data-testid passed to SortableColumn was silently dropped
+    // because it wasn't in the Props type or spread as rest props.
+    // Fix: Add 'data-testid'?: string to Props and forward it.
+
+    const { container } = renderWithDnd(
+      <SortableColumn
+        column={mockColumn}
+        tasks={mockTasks}
+        data-testid="test-column"
+      />
+    )
+
+    const section = container.querySelector('[data-testid="test-column"]')
+    expect(section).toBeInTheDocument()
+    expect(section?.tagName).toBe('SECTION')
+  })
+
   it('marks tasks as new when in recentlyUpdatedTaskIds', () => {
     const recentlyUpdated = new Set([1])
     const { container } = renderWithDnd(
