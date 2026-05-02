@@ -10,6 +10,10 @@ You are the **Orchestrator** for AgentBoard frontend implementation. Your job fo
 3. For each sub-agent that finishes, run a code-review loop until LGTM, then squash-merge to `main`.
 4. Print a summary and exit. **One wave per invocation** — the user re-invokes `/implement` for the next wave.
 
+**⚠️ CRITICAL:** Before starting, read:
+- `.claude/ORCHESTRATION_HARD_RULES.md` (non-negotiable rules for orchestrator and sub-agents)
+- `.claude/commands/README.md` (quick-start guide)
+
 ## Context (read-only — don't paraphrase, just use)
 
 **Code repo:** `C:\Users\nagal\Documents\ai_projects\kanban\` (will be `main` branch after T0).
@@ -46,14 +50,71 @@ If `kanban/.git` does **not** exist: the only eligible Task should be **T0 (#8)*
 
 For each selected Task, dispatch in a **single message with multiple Agent tool calls** (parallel). Each sub-agent uses `general-purpose` type with the prompt template below. Run them in the foreground in this same message — `Agent` returns when each one finishes.
 
-**Per-Task prep (before dispatch):**
-- Compute `branch = task/{NN}-{slug}` where `slug` = lowercase Task title's first 4 alphanumeric tokens joined by `-`.
-- Compute `worktree = C:\Users\nagal\Documents\ai_projects\kanban-worktrees\task-{NN}\`.
-- Move issue Status `Backlog → In progress`:
-  ```
-  ITEM_ID=$(gh project item-list 1 --owner aloknag --format json | jq -r '.items[]|select(.content.number=={NN}).id')
-  gh project item-edit --id $ITEM_ID --project-id PVT_kwHOAIBTCM4BWR9z --field-id PVTSSF_lAHOAIBTCM4BWR9zzhRnmck --single-select-option-id 47fc9ee4 --format json
-  ```
+**Per-Task prep (before dispatch) — MANDATORY:**
+
+Run the pre-dispatch checklist for EACH selected task:
+```powershell
+.\\.claude\commands\pre-dispatch-checklist.ps1 -TaskNumber {NN} -TaskSlug "{slug}"
+```
+
+**Checklist verifies:**
+- [ ] Git repo is on main and clean
+- [ ] Worktree path is free
+- [ ] Branch doesn't already exist
+- [ ] Issue exists in GitHub project
+- [ ] Issue status is Backlog
+- [ ] Updates issue status to In progress
+
+**Exit codes:**
+- `0` → Safe to dispatch (proceed to Phase 3 dispatch)
+- `1` → Fix issues and re-run checklist before dispatching
+
+**If you skip this prep: Wave will halt when sub-agent returns (hard rule violation).**
+
+### Phase 3.5 — Validate Return Messages (Blocking Gate)
+
+**When each agent returns, validate the message BEFORE proceeding to Phase 4.**
+
+**Validation Pattern (REGEX):**
+```regex
+done — committed [a-f0-9]{7} on task/\d+-
+```
+
+**Validation Logic:**
+```
+IF return contains "on main" OR "on main branch":
+  → HALT WAVE (hard rule violation)
+  → git reset --hard <commit-before-bad-ones>
+  → Reset task status back to Backlog
+  → Post issue comment: "implementation halted — agent committed to main"
+  → Create incident note
+  → Exit
+
+ELSE IF return does NOT match regex pattern:
+  → HALT WAVE (invalid format)
+  → Post issue comment: "implementation halted — invalid return message format"
+  → Quote the actual return message
+  → Quote the expected format
+  → Exit
+
+ELSE IF return starts with "blocked":
+  → Post issue comment with block reason
+  → Leave task status at "In progress" (stuck, awaiting triage)
+  → Continue with next task in wave (if any)
+
+ELSE (valid "done" message):
+  → Accept completion
+  → Proceed to Phase 4 (code-review loop)
+```
+
+**Examples:**
+- ✅ Valid: `done — committed 87150dd on task/28-dnd-column`
+- ✅ Valid: `done — committed a1b2c3d on task/23-markdown-component`
+- ❌ Invalid: `done — committed 87150dd on main` (halt wave)
+- ❌ Invalid: `done — committed 87150dd` (halt wave)
+- ✅ Blocked: `blocked — worktree creation failed: Permission denied`
+
+---
 
 ### Phase 4 — Review-fix loop (per Task, sequentially after dispatch returns)
 
@@ -68,6 +129,9 @@ For iteration `i` in 1..3:
   b. **Dispatch code-review** using the `superpowers:requesting-code-review` skill:
      - `BASE_SHA = main HEAD before sub-agent's commits`, `HEAD_SHA = sub-agent's last commit on the branch`.
      - In the dispatch prompt, include: `prior review comments are visible at gh issue view {NN} — do NOT re-raise points already accepted via push-back in earlier iterations`.
+     - In the dispatch prompt, **must** include following:
+        - DON'T BE LAZY. Relentlessly check for dependent code, classes, methods that may have been affected.
+        - Look at "system as a whole".
      - Reviewer **MUST** post its findings as a comment on issue #{NN}: `gh issue comment {NN} --body "..."`.
   c. **Receive verdict** via `superpowers:receiving-code-review`. Three outcomes:
      - **LGTM (no Critical, no unaddressed Important):** break out of loop, proceed to Phase 5.
@@ -123,32 +187,38 @@ Plus a one-line next-step suggestion: `re-run /implement to drain the next wave 
 
 ### ImplementerPrompt (for fresh Task implementation)
 
+**IMPORTANT:** Use the revised template from `.claude/commands/implementer-prompt-template.md`
+
+The template includes:
+- ⚠️ **Hard rules section** (worktree, commits, return format, superpowers)
+- **BLOCKING STEP 1:** Worktree creation (fail-fast, no soft instructions)
+- **BLOCKING STEP 2:** Mandatory superpower invocation (all three required)
+- Pre-return verification checklist
+- Return message format with examples
+
+**Customization guide:**
+1. Open `implementer-prompt-template.md`
+2. Replace `{NN}` with issue number
+3. Replace `{slug}` with branch slug (lowercase, hyphenated, 4 tokens max)
+4. Replace `{CITE_SECTIONS}` with relevant FrontEngDesign/TDD sections
+5. Include reference to `.claude/ORCHESTRATION_HARD_RULES.md`
+6. Include reference to `.claude/commands/superpowers-invocation-guide.md`
+7. Copy full prompt into Agent dispatch call
+
+**Key differences from old template:**
+- ❌ Removed: soft "Set up your worktree" instruction
+- ✅ Added: "BLOCKING STEP 1: Create Worktree" with fail-fast validation
+- ✅ Added: "BLOCKING STEP 2: Invoke Required Superpowers" with explicit sequence
+- ✅ Added: Hard rules section (non-negotiable, 4 rules)
+- ✅ Added: Pre-return verification checklist
+- ✅ Added: Return message format specification (exact) with examples
+
+**Return message format (EXACT — no variations):**
 ```
-You are the implementer for issue #{NN} in repo aloknag/testfiles.
-
-Read these in order:
-  1. gh issue view {NN} --repo aloknag/testfiles --comments
-  2. C:/Users/nagal/Documents/ai_projects/kanban/FrontEngDesign.md (sections cited in the issue body)
-  3. C:/Users/nagal/Documents/ai_projects/kanban/TDD.md (sections cited; ignore §11)
-
-Set up your worktree:
-  cd C:/Users/nagal/Documents/ai_projects/kanban
-  git worktree add ../kanban-worktrees/task-{NN} -b task/{NN}-{slug}
-  cd ../kanban-worktrees/task-{NN}
-
-Implement the Task per its `## Acceptance Criteria`, `## Files`, `## Implementation Notes`, `## Verify` sections.
-
-You MUST invoke `superpowers:test-driven-development` for the implementation loop. Failing test first, every time. Use `superpowers:using-git-worktrees` for worktree discipline. Use `superpowers:verification-before-completion` before declaring done.
-
-Commit using the message specified in the Task's `## Verify` block.
-
-When done, post a comment on issue #{NN}:
-  gh issue comment {NN} --repo aloknag/testfiles --body "implemented — branch \`task/{NN}-{slug}\`, commits: \`<sha1>..<sha2>\`. AC: <which ones pass>. Verify cmds: <all green>."
-
-Return one line to the orchestrator: `done — committed <last-sha> on task/{NN}-{slug}`.
-
-If you cannot complete (e.g. AC has a contradiction, missing dependency you can't resolve): post a comment with the blocker, do NOT commit, return `blocked — <reason>`.
+done — committed <sha> on task/{NN}-{slug}
 ```
+
+Example: `done — committed 87150dd on task/28-dnd-column`
 
 ### T0 mode (no worktree)
 
@@ -229,11 +299,41 @@ ONE attempt only. No retry loop.
 - **Merge conflict + resolver fails:** halt that Task at `In review`, continue.
 - **`gh` API failure / network:** retry once with 5 s backoff. If still failing, halt the wave and surface the error.
 
-## Hard rules
+## Hard Rules (Non-Negotiable)
 
-- One Task = one squash commit on `main`. Never bundle.
-- Sub-agents NEVER push to `main` directly — only the orchestrator merges.
-- Reviewer NEVER re-raises points already accepted via push-back (enforced by passing prior comments in the dispatch prompt).
-- All inter-agent communication that should be auditable goes on the GitHub issue as a comment, not lost in agent context.
-- Never auto-retry a failed sub-agent. Halt and surface.
-- Never delete a worktree until its Task is fully merged + Status=Done.
+**See `.claude/ORCHESTRATION_HARD_RULES.md` for the complete and authoritative list.**
+
+This section summarizes the critical rules. Violations halt the wave immediately.
+
+### Sub-Agent Hard Rules
+1. **Create worktree FIRST (blocking)** — Before any code, create the task worktree. If it fails, return `blocked`.
+2. **Never commit to main** — All commits go to `task/{NN}-{slug}` only. Verify before every commit.
+3. **All commits on task branch only** — Pre-commit checklist before every commit.
+4. **Return message format (exact)** — Format: `done — committed <sha> on task/{NN}-{slug}`. Any other format halts wave.
+5. **All tests pass before done** — Unit tests, AC verification, build, TypeScript compile.
+6. **Invoke superpowers explicitly** — Three mandatory superpowers at start: `using-git-worktrees`, `test-driven-development`, `verification-before-completion`.
+
+### Orchestrator Hard Rules
+1. **Phase 3 prep is mandatory (blocking)** — Run pre-dispatch-checklist.ps1 before every dispatch. Exit code 1 = don't dispatch.
+2. **Validate return messages (blocking gate)** — Check format and "on main" mention. Invalid returns halt wave.
+3. **Never skip validation gates** — Phase 3 → Phase 3.5 (validate) → Phase 4 (review).
+4. **Hard rule violations = immediate halt** — Do not skip, do not workaround, halt and document.
+5. **One Task = one squash commit** — Never bundle tasks in a single merge.
+6. **Sub-agents never push to main** — Only orchestrator merges. Use worktrees exclusively.
+
+### Communication Hard Rules
+- **Reviewer NEVER re-raises points already accepted** via push-back (enforced by passing prior comments in dispatch prompt).
+- **All inter-agent communication goes on GitHub issues** as comments, not lost in agent context.
+- **Never auto-retry a failed sub-agent** — Halt and surface the error.
+- **Never delete a worktree until Task is fully merged + Status=Done** — Preserve for debugging if needed.
+
+---
+
+**Wave Halting Conditions:**
+- Sub-agent commits to main (detected by return message validation)
+- Sub-agent returns invalid message format
+- Pre-dispatch checklist fails (exit code 1)
+- Phase 3 prep is skipped
+- Validator returns `halt — <reason>`
+
+See `.claude/ORCHESTRATION_HARD_RULES.md` for detailed enforcement mechanisms.
