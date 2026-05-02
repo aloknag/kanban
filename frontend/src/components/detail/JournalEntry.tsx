@@ -32,7 +32,10 @@ export function JournalEntry({ comment, isLatest }: Props) {
       {/* Header line: author, timestamp, latest marker */}
       <div className="flex gap-card py-snug">
         {/* Author: fixed-width 16ch mono column */}
-        <span className="font-mono inline-block w-[16ch] truncate text-ink">
+        <span
+          data-author
+          className="font-mono inline-block w-[16ch] truncate text-ink"
+        >
           {comment.author}
         </span>
 
@@ -49,7 +52,10 @@ export function JournalEntry({ comment, isLatest }: Props) {
       </div>
 
       {/* Body: indented 32px (ml-8), rendered in prose */}
-      <div className="ml-8 text-body text-ink">
+      <div
+        data-body
+        className="ml-8 text-body text-ink"
+      >
         {comment.body}
       </div>
     </div>

@@ -16,6 +16,7 @@ import { Plate } from '../components/catalog/Plate'
 import { TopRule } from '../components/chrome/TopRule'
 import { DetailHeader } from '../components/detail/DetailHeader'
 import { Journal } from '../components/detail/Journal'
+import { Markdown } from '../components/detail/Markdown'
 import { getEpic, EpicDetail as EpicDetailType } from '../lib/api'
 
 export function EpicDetail() {
@@ -78,6 +79,12 @@ export function EpicDetail() {
                 isLoading={shouldShowLoading}
                 isNotFound={false}
               />
+              {/* Markdown content */}
+              {epic.content && (
+                <div className="mt-gutter mb-gutter">
+                  <Markdown source={epic.content} />
+                </div>
+              )}
               {/* Journal section below Markdown content */}
               <Journal entityType="epic" entityId={epic.id} />
             </>

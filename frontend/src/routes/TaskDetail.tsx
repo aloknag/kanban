@@ -17,6 +17,7 @@ import { Plate } from '../components/catalog/Plate'
 import { TopRule } from '../components/chrome/TopRule'
 import { DetailHeader } from '../components/detail/DetailHeader'
 import { Journal } from '../components/detail/Journal'
+import { Markdown } from '../components/detail/Markdown'
 import { getTask, getEpic, TaskDetail as TaskDetailType } from '../lib/api'
 
 export function TaskDetail() {
@@ -87,6 +88,12 @@ export function TaskDetail() {
                 isLoading={shouldShowLoading}
                 isNotFound={false}
               />
+              {/* Markdown content */}
+              {task.content && (
+                <div className="mt-gutter mb-gutter">
+                  <Markdown source={task.content} />
+                </div>
+              )}
               {/* Journal section below Markdown content */}
               <Journal entityType="task" entityId={task.id} />
             </>

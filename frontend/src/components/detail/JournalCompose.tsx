@@ -151,6 +151,7 @@ export function JournalCompose({ entityType, entityId }: Props) {
     <div className="mt-card pt-card border-t border-ink3">
       <div className="flex flex-col gap-card">
         <textarea
+          data-testid="comment-input"
           placeholder="add journal entry"
           value={body}
           onChange={(e) => setBody(e.target.value)}
