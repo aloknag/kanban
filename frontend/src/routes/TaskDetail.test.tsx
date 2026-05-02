@@ -30,6 +30,10 @@ vi.mock('../components/chrome/TopRule', () => ({
   TopRule: () => <div data-testid="top-rule" />,
 }))
 
+vi.mock('../components/detail/Journal', () => ({
+  Journal: () => <div data-testid="journal" />,
+}))
+
 describe('TaskDetail route error handling and loading state', () => {
   const mockTask = {
     id: 14,

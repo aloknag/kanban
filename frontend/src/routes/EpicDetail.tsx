@@ -15,6 +15,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Plate } from '../components/catalog/Plate'
 import { TopRule } from '../components/chrome/TopRule'
 import { DetailHeader } from '../components/detail/DetailHeader'
+import { Journal } from '../components/detail/Journal'
 import { getEpic, EpicDetail as EpicDetailType } from '../lib/api'
 
 export function EpicDetail() {
@@ -70,12 +71,16 @@ export function EpicDetail() {
 
           {/* Detail header (handles loading, not found, and normal states) */}
           {epic ? (
-            <DetailHeader
-              entity={epic}
-              parentEpic={undefined}
-              isLoading={shouldShowLoading}
-              isNotFound={false}
-            />
+            <>
+              <DetailHeader
+                entity={epic}
+                parentEpic={undefined}
+                isLoading={shouldShowLoading}
+                isNotFound={false}
+              />
+              {/* Journal section below Markdown content */}
+              <Journal entityType="epic" entityId={epic.id} />
+            </>
           ) : isNotFound ? (
             <DetailHeader
               entity={{} as EpicDetailType}

@@ -29,6 +29,10 @@ vi.mock('../components/chrome/TopRule', () => ({
   TopRule: () => <div data-testid="top-rule" />,
 }))
 
+vi.mock('../components/detail/Journal', () => ({
+  Journal: () => <div data-testid="journal" />,
+}))
+
 describe('EpicDetail route error handling and loading state', () => {
   const mockEpic = {
     id: 2,

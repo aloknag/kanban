@@ -16,6 +16,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Plate } from '../components/catalog/Plate'
 import { TopRule } from '../components/chrome/TopRule'
 import { DetailHeader } from '../components/detail/DetailHeader'
+import { Journal } from '../components/detail/Journal'
 import { getTask, getEpic, TaskDetail as TaskDetailType } from '../lib/api'
 
 export function TaskDetail() {
@@ -79,12 +80,16 @@ export function TaskDetail() {
 
           {/* Detail header (handles loading, not found, and normal states) */}
           {task ? (
-            <DetailHeader
-              entity={task}
-              parentEpic={parentEpic}
-              isLoading={shouldShowLoading}
-              isNotFound={false}
-            />
+            <>
+              <DetailHeader
+                entity={task}
+                parentEpic={parentEpic}
+                isLoading={shouldShowLoading}
+                isNotFound={false}
+              />
+              {/* Journal section below Markdown content */}
+              <Journal entityType="task" entityId={task.id} />
+            </>
           ) : isNotFound ? (
             <DetailHeader
               entity={{} as TaskDetailType}
