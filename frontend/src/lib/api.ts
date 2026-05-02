@@ -203,3 +203,22 @@ export async function postEpicComment(
 
   return await response.json();
 }
+
+/**
+ * Reorder columns on the backend
+ */
+export async function patchColumnsReorder(ids: number[]): Promise<any> {
+  const response = await fetch(`${API_BASE}/columns/reorder`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ ids }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  }
+
+  return await response.json();
+}

@@ -83,3 +83,45 @@ describe('ColumnHeader', () => {
     expect(button).toHaveClass('opacity-50')
   })
 })
+
+describe('ColumnHeader DnD', () => {
+  const mockColumn: Column = {
+    id: 1,
+    name: 'Todo',
+    position: 0,
+  }
+
+  it('header element has grab cursor for drag indication', () => {
+    const { container } = render(
+      <ColumnHeader column={mockColumn} taskCount={3} isDraggable={true} />
+    )
+    const header = container.querySelector('header')
+    expect(header).toHaveClass('cursor-grab')
+  })
+
+  it('shows dashed signal outline when data-dragging is set', () => {
+    const { container } = render(
+      <ColumnHeader
+        column={mockColumn}
+        taskCount={3}
+        isDraggable={true}
+        isDragging={true}
+      />
+    )
+    const header = container.querySelector('header')
+    expect(header).toHaveAttribute('data-dragging')
+  })
+
+  it('applies reduced opacity when dragging', () => {
+    const { container } = render(
+      <ColumnHeader
+        column={mockColumn}
+        taskCount={3}
+        isDraggable={true}
+        isDragging={true}
+      />
+    )
+    const header = container.querySelector('header')
+    expect(header).toHaveStyle('opacity: 0.85')
+  })
+})

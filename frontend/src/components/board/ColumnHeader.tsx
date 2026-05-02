@@ -1,13 +1,18 @@
 /**
  * ColumnHeader — Header for a Kanban column
- * 
+ *
  * Per FrontEngDesign.md §4.1:
  * - Displays column name in --t-label uppercase mono
  * - Shows count of tasks in --c-ink-2
  * - Em-dash separator
  * - Optional collapse chevron for collapsible columns (Done)
+ *
+ * Per FrontEngDesign.md §6.3 (DnD):
+ * - When isDraggable, shows grab cursor
+ * - When isDragging, shows dashed outline + opacity: 0.85
  */
 
+import { CSSProperties } from 'react'
 import { Column } from '../../lib/api'
 
 type Props = {
@@ -16,6 +21,11 @@ type Props = {
   isCollapsible?: boolean
   isCollapsed?: boolean
   onToggleCollapse?: () => void
+  isDraggable?: boolean
+  isDragging?: boolean
+  dndAttributes?: Record<string, any>
+  dndListeners?: Record<string, any>
+  style?: CSSProperties
 }
 
 export function ColumnHeader({
@@ -24,9 +34,26 @@ export function ColumnHeader({
   isCollapsible = false,
   isCollapsed = false,
   onToggleCollapse,
+  isDraggable = false,
+  isDragging = false,
+  dndAttributes,
+  dndListeners,
+  style,
 }: Props) {
   return (
-    <header className="flex items-baseline justify-between gap-card mb-gutter">
+    <header
+      className={`flex items-baseline justify-between gap-card mb-gutter ${
+        isDraggable ? 'cursor-grab' : ''
+      }`}
+      data-dragging={isDragging || undefined}
+      style={{
+        ...style,
+        outline: isDragging ? '1px dashed var(--c-signal)' : 'none',
+        opacity: isDragging ? 0.85 : 1,
+      }}
+      {...dndAttributes}
+      {...dndListeners}
+    >
       <div className="flex items-baseline gap-tight">
         <h2 className="text-label font-mono text-ink uppercase tracking-wider">
           {column.name.toUpperCase()}

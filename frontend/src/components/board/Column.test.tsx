@@ -133,3 +133,38 @@ describe('Column', () => {
     expect(onToggleCollapse).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('columnReorderReducer', () => {
+  it('reorders columns based on new id array', async () => {
+    // Test the optimistic update reducer logic
+    const { columnReorderReducer } = await import('../../lib/columnReorder')
+
+    const oldColumns: ColumnType[] = [
+      { id: 1, name: 'Todo', position: 0 },
+      { id: 2, name: 'In Progress', position: 1 },
+      { id: 3, name: 'Done', position: 2 },
+    ]
+
+    const newIds = [2, 1, 3] // Move "In Progress" to the front
+    const result = columnReorderReducer(oldColumns, newIds)
+
+    expect(result[0].id).toBe(2)
+    expect(result[1].id).toBe(1)
+    expect(result[2].id).toBe(3)
+  })
+
+  it('preserves column data while reordering', async () => {
+    const { columnReorderReducer } = await import('../../lib/columnReorder')
+
+    const oldColumns: ColumnType[] = [
+      { id: 1, name: 'Todo', position: 0 },
+      { id: 2, name: 'In Progress', position: 1 },
+    ]
+
+    const newIds = [2, 1]
+    const result = columnReorderReducer(oldColumns, newIds)
+
+    expect(result[0].name).toBe('In Progress')
+    expect(result[1].name).toBe('Todo')
+  })
+})

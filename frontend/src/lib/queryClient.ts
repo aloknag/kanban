@@ -8,7 +8,7 @@ export const createQueryClient = () => {
         gcTime: 1000 * 60 * 5, // 5 minutes (formerly cacheTime)
         refetchInterval: 5000, // Poll every 5 seconds
         refetchOnWindowFocus: true, // Refetch when window regains focus
-        placeholderData: (prev) => prev, // Keep previous data during refetch to avoid flicker
+        placeholderData: (prev: unknown) => prev, // Keep previous data during refetch to avoid flicker
         retry: 1,
       },
     },

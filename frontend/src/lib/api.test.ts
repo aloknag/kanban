@@ -7,6 +7,7 @@ import {
   getEpic,
   getTaskComments,
   getEpicComments,
+  patchColumnsReorder,
 } from './api';
 
 declare global {
@@ -317,6 +318,68 @@ describe('API Client', () => {
       });
 
       await expect(getEpicComments(1)).rejects.toThrow('API error: 500 Internal Server Error');
+    });
+  });
+
+  describe('patchColumnsReorder', () => {
+    it('calls PATCH /api/columns/reorder with correct body', async () => {
+      const ids = [2, 1, 3];
+      const mockResponse = [
+        { id: 2, name: 'In Progress', position: 0 },
+        { id: 1, name: 'Backlog', position: 1 },
+        { id: 3, name: 'Done', position: 2 },
+      ];
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse,
+      });
+
+      await patchColumnsReorder(ids);
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:8000/api/columns/reorder',
+        expect.objectContaining({
+          method: 'PATCH',
+          headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ ids }),
+        })
+      );
+    });
+
+    it('returns the reordered columns on success', async () => {
+      const ids = [2, 1, 3];
+      const expected = [
+        { id: 2, name: 'In Progress', position: 0 },
+        { id: 1, name: 'Backlog', position: 1 },
+        { id: 3, name: 'Done', position: 2 },
+      ];
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => expected,
+      });
+
+      const result = await patchColumnsReorder(ids);
+      expect(result).toEqual(expected);
+    });
+
+    it('throws on API error', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        statusText: 'Bad Request',
+      });
+
+      await expect(patchColumnsReorder([1, 2])).rejects.toThrow(
+        'API error: 400 Bad Request'
+      );
+    });
+
+    it('throws on network error', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('Network failure'));
+
+      await expect(patchColumnsReorder([1, 2])).rejects.toThrow('Network failure');
     });
   });
 });

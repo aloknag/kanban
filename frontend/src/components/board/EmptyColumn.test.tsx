@@ -14,14 +14,14 @@ describe('EmptyColumn', () => {
   })
 
   it('displays primary text with correct styling', () => {
-    const { container } = render(<EmptyColumn />)
+    render(<EmptyColumn />)
     const primary = screen.getByText('\u25c7 no specimens')
     expect(primary).toHaveClass('text-body')
     expect(primary).toHaveClass('text-ink3')
   })
 
   it('displays secondary text in bodysm', () => {
-    const { container } = render(<EmptyColumn />)
+    render(<EmptyColumn />)
     const secondary = screen.getByText('nothing has been filed in this column.')
     expect(secondary).toHaveClass('text-bodysm')
     expect(secondary).toHaveClass('text-ink3')
