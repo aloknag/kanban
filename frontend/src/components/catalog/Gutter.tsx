@@ -13,6 +13,7 @@ export function Gutter() {
       className="w-margin flex-shrink-0 border-r border-hair border-ink3 bg-paper py-page px-card"
       role="complementary"
       aria-label="Catalog sidebar"
+      data-gutter-rule
     >
       <div className="text-label font-mono text-ink2 tracking-widest">
         CATALOG

@@ -90,3 +90,73 @@
 
 html { background: var(--c-paper); color: var(--c-ink); }
 body { font-family: var(--f-body); font-feature-settings: 'ss01', 'cv11'; }
+
+/* Print stylesheet — Per FrontEngDesign.md §13 #5 and §17 #1 */
+@media print {
+  /* B&W rendering for A4 printing */
+  html {
+    background: white;
+    color: black;
+  }
+
+  body {
+    background: white;
+    color: black;
+  }
+
+  /* Hide interactive UI chrome */
+  [data-print-hide],
+  [role="banner"],
+  [role="button"],
+  button {
+    display: none !important;
+  }
+
+  /* Hide collapse buttons but expand content */
+  header[data-dragging] button {
+    display: none !important;
+  }
+
+  /* Expand collapsed columns for archival (show hidden task lists) */
+  section[data-column-id] > div {
+    display: block !important;
+  }
+
+  /* Optimize page breaks */
+  section[data-column-id],
+  [role="region"] {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  article[data-task-id],
+  [data-card] {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Ensure board content doesn't break awkwardly */
+  [data-testid="board-content"] {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  /* Hide gutter rule styling for print */
+  [data-gutter-rule] {
+    color: black;
+    border-color: black;
+  }
+
+  /* Mermaid diagram handling for print */
+  svg[data-mermaid],
+  .mermaid {
+    forced-color-adjust: none;
+    color-adjust: exact;
+  }
+
+  /* Remove animations and transitions for print */
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

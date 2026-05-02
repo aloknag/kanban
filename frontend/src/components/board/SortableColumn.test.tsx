@@ -84,8 +84,8 @@ describe('SortableColumn', () => {
     expect(screen.getByText('Another task')).toBeInTheDocument()
   })
 
-  it('hides task content when collapsed', () => {
-    renderWithDnd(
+  it('hides task content when collapsed using CSS display:none (for print support)', () => {
+    const { container } = renderWithDnd(
       <SortableColumn
         column={mockColumn}
         tasks={mockTasks}
@@ -93,8 +93,21 @@ describe('SortableColumn', () => {
       />
     )
 
-    expect(screen.queryByText('Test task')).not.toBeInTheDocument()
-    expect(screen.queryByText('Another task')).not.toBeInTheDocument()
+    // Content is still in DOM but hidden with display:none for print stylesheet support
+    const section = container.querySelector('section[data-collapsed="true"]')
+    expect(section).toBeInTheDocument()
+
+    // Get the direct child div that wraps the task content
+    const hiddenDiv = Array.from(section?.children || []).find(
+      child => child.tagName === 'DIV'
+    ) as HTMLElement
+
+    expect(hiddenDiv).toBeDefined()
+    expect(hiddenDiv?.style.display).toBe('none')
+
+    // Tasks are in DOM but hidden
+    expect(screen.queryByText('Test task')).toBeInTheDocument()
+    expect(screen.queryByText('Another task')).toBeInTheDocument()
   })
 
   it('calls onToggleCollapse when collapse button is clicked', () => {

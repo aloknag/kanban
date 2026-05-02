@@ -103,8 +103,8 @@ describe('Column', () => {
     expect(screen.getByRole('button')).toBeInTheDocument()
   })
 
-  it('hides tasks when column is collapsed', () => {
-    renderWithRouter(
+  it('hides tasks when column is collapsed using CSS display:none (for print support)', () => {
+    const { container } = renderWithRouter(
       <Column
         column={mockColumn}
         tasks={mockTasks}
@@ -113,8 +113,21 @@ describe('Column', () => {
         onToggleCollapse={() => {}}
       />
     )
-    expect(screen.queryByText('TASK-001')).not.toBeInTheDocument()
-    expect(screen.queryByText('TASK-002')).not.toBeInTheDocument()
+    // Content is still in DOM but hidden with display:none for print stylesheet support
+    const section = container.querySelector('section[data-collapsed="true"]')
+    expect(section).toBeInTheDocument()
+
+    // Get the direct child div that wraps the task content
+    const hiddenDiv = Array.from(section?.children || []).find(
+      child => child.tagName === 'DIV' && child !== section?.querySelector('header')?.parentElement
+    ) as HTMLElement
+
+    expect(hiddenDiv).toBeDefined()
+    expect(hiddenDiv?.style.display).toBe('none')
+
+    // Tasks are in DOM but hidden
+    expect(screen.queryByText('TASK-001')).toBeInTheDocument()
+    expect(screen.queryByText('TASK-002')).toBeInTheDocument()
   })
 
   it('calls onToggleCollapse when collapse button is clicked', () => {

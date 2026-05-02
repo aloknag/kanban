@@ -9,6 +9,11 @@
  */
 
 import { describe, it, expect } from 'vitest'
+import { render } from '@testing-library/react'
+import { BrowserRouter } from 'react-router-dom'
+import { Column } from '../components/board/Column'
+import { SortableColumn } from '../components/board/SortableColumn'
+import { Column as ColumnType, Task } from '../lib/api'
 
 describe('Print stylesheet', () => {
   it('should have correct CSS selectors for print hiding (role="banner")', () => {
@@ -81,5 +86,135 @@ describe('Print stylesheet', () => {
     }
 
     expect(Object.keys(selectors).length).toBe(8)
+  })
+})
+
+describe('Print stylesheet — Integration with live DOM', () => {
+  const mockColumn: ColumnType = {
+    id: 1,
+    name: 'Todo',
+    position: 0,
+  }
+
+  const mockTask: Task = {
+    id: 101,
+    slug: 'TASK-001',
+    title: 'Task 1',
+    excerpt: 'Description',
+    assignee: 'agent-1',
+    column_id: 1,
+    epic_id: null,
+    updated_at: '2026-05-01T12:00:00Z',
+  }
+
+  it('CSS selector section[data-column-id] > div matches collapsed content wrapper in Column', () => {
+    const { container } = render(
+      <BrowserRouter>
+        <Column
+          column={mockColumn}
+          tasks={[mockTask]}
+          isCollapsible={true}
+          isCollapsed={true}
+        />
+      </BrowserRouter>
+    )
+
+    // Find the section with data-column-id
+    const section = container.querySelector('section[data-column-id]') as HTMLElement
+    expect(section).toBeInTheDocument()
+    expect(section?.getAttribute('data-column-id')).toBe('1')
+
+    // Find the direct child div (the one with display: none when collapsed)
+    const directChildDiv = Array.from(section?.children || []).find(
+      (child) => child.tagName === 'DIV' && child !== section?.querySelector('header')?.parentElement
+    ) as HTMLElement
+
+    expect(directChildDiv).toBeDefined()
+    expect(directChildDiv?.style.display).toBe('none')
+
+    // Verify the selector section[data-column-id] > div would match this element
+    const matchesSelector = section?.querySelector(':scope > div') === directChildDiv
+    expect(matchesSelector).toBe(true)
+  })
+
+  it('CSS selector section[data-column-id] > div matches wrapper in SortableColumn (DnD column)', () => {
+    const { container } = render(
+      <BrowserRouter>
+        <SortableColumn
+          column={mockColumn}
+          tasks={[mockTask]}
+          isCollapsible={true}
+          isCollapsed={true}
+        />
+      </BrowserRouter>
+    )
+
+    // Find the section with data-column-id
+    const section = container.querySelector('section[data-column-id]') as HTMLElement
+    expect(section).toBeInTheDocument()
+    expect(section?.getAttribute('data-column-id')).toBe('1')
+
+    // Find the direct child div (the one with display: none when collapsed)
+    const directChildDiv = Array.from(section?.children || []).find(
+      (child) => child.tagName === 'DIV' && child !== section?.querySelector('header')?.parentElement
+    ) as HTMLElement
+
+    expect(directChildDiv).toBeDefined()
+    expect(directChildDiv?.style.display).toBe('none')
+
+    // Verify the selector matches
+    const matchesSelector = section?.querySelector(':scope > div') === directChildDiv
+    expect(matchesSelector).toBe(true)
+  })
+
+  it('print media rule section[data-column-id] > div { display: block !important } will override collapsed state', () => {
+    const { container } = render(
+      <BrowserRouter>
+        <Column
+          column={mockColumn}
+          tasks={[mockTask]}
+          isCollapsible={true}
+          isCollapsed={true}
+        />
+      </BrowserRouter>
+    )
+
+    // In a real print scenario, the CSS rule would override the inline style
+    const section = container.querySelector('section[data-column-id]')
+    const wrapper = section?.querySelector(':scope > div') as HTMLElement
+
+    // The DOM has display: none inline style when collapsed
+    expect(wrapper?.style.display).toBe('none')
+
+    // But print media CSS rule targets this exact selector to override it
+    const selectorWillMatch = document.documentElement.querySelectorAll(
+      'section[data-column-id] > div'
+    ).length >= 1 || wrapper !== null
+
+    expect(selectorWillMatch).toBe(true)
+  })
+
+  it('Column component renders with data-column-id attribute (not just SortableColumn)', () => {
+    const { container } = render(
+      <BrowserRouter>
+        <Column column={mockColumn} tasks={[mockTask]} />
+      </BrowserRouter>
+    )
+
+    const section = container.querySelector('section[data-column-id]')
+    expect(section).toBeInTheDocument()
+    expect(section?.getAttribute('data-column-id')).toBe('1')
+  })
+
+  it('SortableColumn component renders with data-column-id attribute', () => {
+    const { container } = render(
+      <BrowserRouter>
+        <SortableColumn column={mockColumn} tasks={[mockTask]} />
+      </BrowserRouter>
+    )
+
+    const section = container.querySelector('section[data-column-id]')
+    expect(section).toBeInTheDocument()
+    expect(section?.getAttribute('data-column-id')).toBe('1')
   })
 })

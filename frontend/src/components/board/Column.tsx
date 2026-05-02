@@ -32,7 +32,7 @@ export function Column({
   onToggleCollapse,
 }: Props) {
   return (
-    <section className="mb-gutter">
+    <section className="mb-gutter" data-column-id={column.id} data-collapsed={isCollapsed || undefined}>
       <ColumnHeader
         column={column}
         taskCount={tasks.length}
@@ -41,29 +41,27 @@ export function Column({
         onToggleCollapse={onToggleCollapse}
       />
 
-      {!isCollapsed && (
-        <>
-          {tasks.length === 0 ? (
-            <EmptyColumn />
-          ) : (
-            <div className="space-y-card">
-              {tasks.map(task => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  isNew={recentlyUpdatedTaskIds.has(task.id)}
-                />
-              ))}
-            </div>
-          )}
+      <div style={isCollapsed ? { display: 'none' } : undefined}>
+        {tasks.length === 0 ? (
+          <EmptyColumn />
+        ) : (
+          <div className="space-y-card">
+            {tasks.map(task => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                isNew={recentlyUpdatedTaskIds.has(task.id)}
+              />
+            ))}
+          </div>
+        )}
 
-          {/* Bottom separator rule */}
-          <div
-            className="mt-gutter border-b border-ink3"
-            aria-hidden="true"
-          />
-        </>
-      )}
+        {/* Bottom separator rule */}
+        <div
+          className="mt-gutter border-b border-ink3"
+          aria-hidden="true"
+        />
+      </div>
     </section>
   )
 }

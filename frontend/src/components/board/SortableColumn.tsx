@@ -53,6 +53,7 @@ export function SortableColumn({
       style={style}
       data-column-id={column.id}
       className="mb-gutter"
+      data-collapsed={isCollapsed || undefined}
     >
       <ColumnHeader
         column={column}
@@ -66,29 +67,27 @@ export function SortableColumn({
         dndListeners={listeners}
       />
 
-      {!isCollapsed && (
-        <>
-          {tasks.length === 0 ? (
-            <EmptyColumn />
-          ) : (
-            <div className="space-y-card">
-              {tasks.map(task => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  isNew={recentlyUpdatedTaskIds.has(task.id)}
-                />
-              ))}
-            </div>
-          )}
+      <div style={isCollapsed ? { display: 'none' } : undefined}>
+        {tasks.length === 0 ? (
+          <EmptyColumn />
+        ) : (
+          <div className="space-y-card">
+            {tasks.map(task => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                isNew={recentlyUpdatedTaskIds.has(task.id)}
+              />
+            ))}
+          </div>
+        )}
 
-          {/* Bottom separator rule */}
-          <div
-            className="mt-gutter border-b border-ink3"
-            aria-hidden="true"
-          />
-        </>
-      )}
+        {/* Bottom separator rule */}
+        <div
+          className="mt-gutter border-b border-ink3"
+          aria-hidden="true"
+        />
+      </div>
     </section>
   )
 }
