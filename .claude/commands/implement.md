@@ -120,6 +120,20 @@ ELSE (valid "done" message):
 
 Once a sub-agent reports `done — committed <SHA> on <branch>`:
 
+⚠️ **CRITICAL: BRANCH CONTEXT**
+
+The implementer worked on branch `task/{NN}-{slug}`. All their files exist ONLY on this branch.
+Before code review, the reviewer MUST switch to the correct branch:
+
+```bash
+git checkout task/{NN}-{slug}
+git branch --show-current  # Verify output shows: task/{NN}-{slug}
+git log --oneline | head -1  # Verify latest commit SHA
+```
+
+**If files are not found:** You may be on the wrong branch. Always verify branch context first.
+Do NOT check main — files won't exist there until after merge (that's correct).
+
 For iteration `i` in 1..3:
 
   a. **Read prior comments** on the issue to give the reviewer history:

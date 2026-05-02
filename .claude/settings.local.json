@@ -1,10 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python *)",
+      "Bash(*)",
       "Bash(uv sync *)",
       "Skill(update-config)",
-      "Bash(.venv/Scripts/python *)"
+      "Bash(*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:api.github.com)",
+      "WebSearch"
     ]
   }
 }
