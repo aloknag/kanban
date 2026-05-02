@@ -29,6 +29,9 @@ playwright-report/
 *.swn
 .DS_Store
 
+# Git worktrees
+.worktrees/
+
 # Frontend
 frontend/node_modules/
 frontend/dist/
