@@ -10,6 +10,7 @@ describe('Journal', () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
+    localStorage.setItem('author', 'test-user');
     queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },

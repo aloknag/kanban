@@ -13,6 +13,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { getTaskComments, getEpicComments } from '../../lib/api';
 import { JournalEntry } from './JournalEntry';
+import { JournalCompose } from './JournalCompose';
 
 type Props = {
   entityType: 'task' | 'epic';
@@ -73,6 +74,9 @@ export function Journal({ entityType, entityId }: Props) {
           ))}
         </div>
       )}
+
+      {/* Compose box pinned to bottom */}
+      <JournalCompose entityType={entityType} entityId={entityId} />
     </section>
   );
 }
