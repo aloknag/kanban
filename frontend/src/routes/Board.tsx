@@ -15,8 +15,9 @@
  * - PATCH /api/columns/reorder on drop
  */
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import {
   DndContext,
   DragEndEvent,
@@ -34,7 +35,9 @@ import {
 } from '@dnd-kit/sortable'
 import { TopRule } from '../components/chrome/TopRule'
 import { Plate } from '../components/catalog/Plate'
+import { KeyboardSheet } from '../components/chrome/KeyboardSheet'
 import { SortableColumn } from '../components/board/SortableColumn'
+import { useHotkeys } from '../system/HotkeyProvider'
 import {
   getColumns,
   getTasks,
@@ -47,6 +50,7 @@ import { shouldRejectDragEnd } from '../lib/dndGuards'
 
 export function Board() {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [recentlyUpdatedTaskIds, setRecentlyUpdatedTaskIds] = useState<
     Set<number>
   >(new Set())
@@ -62,6 +66,8 @@ export function Board() {
     }
     return new Set()
   })
+  const [focusedCardId, setFocusedCardId] = useState<number | null>(null)
+  const [keyboardSheetOpen, setKeyboardSheetOpen] = useState(false)
 
   // Set up DnD sensors for pointer and keyboard
   const sensors = useSensors(
@@ -90,6 +96,13 @@ export function Board() {
     queryKey: ['tasks'],
     queryFn: () => getTasks(),
   })
+
+  // Focus first card on mount
+  useEffect(() => {
+    if (tasks.length > 0 && focusedCardId === null) {
+      setFocusedCardId(tasks[0].id)
+    }
+  }, [tasks, focusedCardId])
 
   // Track recently updated tasks for "new" indicator (8 second decay)
   useEffect(() => {
@@ -204,9 +217,70 @@ export function Board() {
   const isLoading = columnsLoading || tasksLoading
   const error = columnsError || tasksError
 
+  // Memoize stable hotkey object with all dependencies
+  // This prevents unnecessary re-registration via useHotkeys dependency array
+  const hotkeys = useMemo(() => ({
+    j: () => {
+      const currentIdx = tasks.findIndex(t => t.id === focusedCardId)
+      if (currentIdx < tasks.length - 1) {
+        setFocusedCardId(tasks[currentIdx + 1].id)
+      }
+    },
+    k: () => {
+      const currentIdx = tasks.findIndex(t => t.id === focusedCardId)
+      if (currentIdx > 0) {
+        setFocusedCardId(tasks[currentIdx - 1].id)
+      }
+    },
+    'g b': () => navigate('/'),
+    'g e': () => navigate('/epics'),
+    enter: () => {
+      if (focusedCardId) navigate(`/tasks/${focusedCardId}`)
+    },
+    escape: () => setKeyboardSheetOpen(false),
+    n: () => {
+      if (focusedCardId) {
+        navigate(`/tasks/${focusedCardId}`)
+        // Focus the compose textarea after navigation
+        // Use setTimeout to ensure the DOM has updated after route change
+        setTimeout(() => {
+          const textarea = document.querySelector<HTMLTextAreaElement>(
+            '[data-testid="comment-input"]'
+          )
+          if (textarea) {
+            textarea.focus()
+          }
+        }, 0)
+      }
+    },
+    c: () => {
+      if (focusedCardId) {
+        const focusedTask = tasks.find(t => t.id === focusedCardId)
+        if (focusedTask) {
+          handleToggleCollapse(focusedTask.column_id)
+        }
+      }
+    },
+    '/': () => {
+      // TODO: Focus the filter input in TopRule
+    },
+    '?': () => setKeyboardSheetOpen(!keyboardSheetOpen),
+    t: () => {
+      const html = document.documentElement
+      const currentTheme = html.getAttribute('data-theme')
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark'
+      html.setAttribute('data-theme', newTheme)
+      localStorage.setItem('theme', newTheme)
+    },
+  }), [tasks, focusedCardId, navigate, keyboardSheetOpen, handleToggleCollapse])
+
+  // Register hotkey handlers
+  useHotkeys(hotkeys)
+
   return (
     <div className="flex flex-col min-h-screen bg-paper" data-testid="board-page">
       <TopRule />
+      <KeyboardSheet open={keyboardSheetOpen} onClose={() => setKeyboardSheetOpen(false)} />
       <Plate>
         <div className="w-full">
           {/* Error state */}
@@ -250,6 +324,7 @@ export function Board() {
                         column={column}
                         tasks={columnTasks}
                         recentlyUpdatedTaskIds={recentlyUpdatedTaskIds}
+                        focusedCardId={focusedCardId}
                         isCollapsible={isCollapsible}
                         isCollapsed={isCollapsed}
                         onToggleCollapse={() => handleToggleCollapse(column.id)}

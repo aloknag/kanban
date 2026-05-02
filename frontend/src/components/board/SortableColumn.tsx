@@ -20,6 +20,7 @@ type Props = {
   column: ColumnType
   tasks: Task[]
   recentlyUpdatedTaskIds?: Set<number>
+  focusedCardId?: number | null
   isCollapsible?: boolean
   isCollapsed?: boolean
   onToggleCollapse?: () => void
@@ -29,6 +30,7 @@ export function SortableColumn({
   column,
   tasks,
   recentlyUpdatedTaskIds = new Set(),
+  focusedCardId = null,
   isCollapsible = false,
   isCollapsed = false,
   onToggleCollapse,
@@ -77,6 +79,7 @@ export function SortableColumn({
                 key={task.id}
                 task={task}
                 isNew={recentlyUpdatedTaskIds.has(task.id)}
+                isFocused={focusedCardId === task.id}
               />
             ))}
           </div>

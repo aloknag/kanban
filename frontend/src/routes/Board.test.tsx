@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { Board } from './Board'
+import { HotkeyProvider } from '../system/HotkeyProvider'
 import { createQueryClient } from '../lib/queryClient'
 import * as api from '../lib/api'
 
@@ -48,7 +49,9 @@ describe('Board', () => {
     return render(
       <BrowserRouter>
         <QueryClientProvider client={queryClient}>
-          {component}
+          <HotkeyProvider>
+            {component}
+          </HotkeyProvider>
         </QueryClientProvider>
       </BrowserRouter>
     )
@@ -287,6 +290,60 @@ describe('Board', () => {
         expect(screen.getByText('agent-2')).toBeInTheDocument()
         expect(screen.getByText('Create a static board reading from API')).toBeInTheDocument()
       })
+    })
+  })
+
+  describe('Hotkey focus navigation and isFocused prop', () => {
+    beforeEach(() => {
+      vi.mocked(api.getColumns).mockResolvedValue(mockColumns)
+      vi.mocked(api.getTasks).mockResolvedValue(mockTasks)
+    })
+
+    it('initializes focus on first card on mount', async () => {
+      const { container } = renderWithProviders(<Board />)
+
+      await waitFor(() => {
+        expect(screen.getByText('TASK-001')).toBeInTheDocument()
+        expect(screen.getByText('TASK-002')).toBeInTheDocument()
+      })
+
+      // First card should have focus ring by default
+      const firstCard = container.querySelector('[data-task-id="1"]')
+      expect(firstCard?.style.boxShadow).toBe('0 0 0 2px var(--c-signal)')
+
+      // Second card should not have focus
+      const secondCard = container.querySelector('[data-task-id="2"]')
+      expect(secondCard?.style.boxShadow).not.toBe('0 0 0 2px var(--c-signal)')
+    })
+
+    it('applies isFocused shadow to focused card via TaskCard prop', async () => {
+      const { container } = renderWithProviders(<Board />)
+
+      await waitFor(() => {
+        expect(screen.getByText('TASK-001')).toBeInTheDocument()
+      })
+
+      // Verify that the isFocused prop results in focus ring shadow
+      const firstCard = container.querySelector('[data-task-id="1"]')
+      const style = window.getComputedStyle(firstCard!)
+      // Check that box-shadow style is applied (via inline style)
+      expect(firstCard?.style.boxShadow).toMatch(/2px.*signal/)
+    })
+
+    it('passes isFocused=true to TaskCard for focused task', async () => {
+      const { container } = renderWithProviders(<Board />)
+
+      await waitFor(() => {
+        expect(screen.getByText('TASK-001')).toBeInTheDocument()
+        expect(screen.getByText('TASK-002')).toBeInTheDocument()
+      })
+
+      // Only TASK-001 (focused) should have the focus shadow
+      const task1 = container.querySelector('[data-task-id="1"]')
+      const task2 = container.querySelector('[data-task-id="2"]')
+
+      expect(task1?.style.boxShadow).toContain('2px')
+      expect(task2?.style.boxShadow).not.toContain('2px')
     })
   })
 

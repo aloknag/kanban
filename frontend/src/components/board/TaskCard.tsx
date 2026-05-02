@@ -16,9 +16,10 @@ import { Task } from '../../lib/api'
 type Props = {
   task: Task
   isNew?: boolean
+  isFocused?: boolean
 }
 
-export function TaskCard({ task, isNew = false }: Props) {
+export function TaskCard({ task, isNew = false, isFocused = false }: Props) {
   const [showNew, setShowNew] = useState(isNew)
 
   useEffect(() => {
@@ -39,9 +40,26 @@ export function TaskCard({ task, isNew = false }: Props) {
       className={[
         'group relative bg-card border-hair border-ink3 p-card',
         'transition-colors duration-fast hover:border-ink',
-        'data-[new]:shadow-[inset_1px_0_0_var(--c-signal)]',
         'data-[new]:transition-[box-shadow] data-[new]:duration-[8000ms]',
       ].join(' ')}
+      style={
+        showNew && isFocused
+          ? {
+              boxShadow:
+                'inset 1px 0 0 var(--c-signal), 0 0 0 2px var(--c-signal)',
+              transition: 'box-shadow 8000ms',
+            }
+          : showNew
+          ? {
+              boxShadow: 'inset 1px 0 0 var(--c-signal)',
+              transition: 'box-shadow 8000ms',
+            }
+          : isFocused
+          ? {
+              boxShadow: '0 0 0 2px var(--c-signal)',
+            }
+          : undefined
+      }
     >
       {/* Meta row: ID, epic, assignee, timestamp */}
       <header className="flex items-baseline gap-tight text-meta font-mono text-ink3 flex-wrap">

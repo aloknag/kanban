@@ -97,13 +97,35 @@ describe('TaskCard', () => {
       const { container } = renderWithRouter(<TaskCard task={mockTask} />)
       const article = container.querySelector('article')
       const className = article?.className || ''
-      // Per FrontEngDesign.md §2.4: shadow only allowed as data-[new]:shadow for fade effect
-      // The only acceptable shadow is 0 0 0 2px for focus rings, but we use inset for data-new fade
-      expect(className).toMatch(/data-\[new\]:shadow-\[inset/)
+      // Per FrontEngDesign.md §2.4: shadow handled via inline styles, not classes
       expect(className).not.toMatch(/rounded-[xlmd]/)
       expect(className).not.toMatch(/transform/)
       expect(className).not.toMatch(/scale-/)
       expect(className).not.toMatch(/backdrop-blur/)
+    })
+  })
+
+  describe('isFocused prop and focus ring', () => {
+    it('applies focus ring shadow when isFocused is true', () => {
+      const { container } = renderWithRouter(<TaskCard task={mockTask} isFocused={true} />)
+      const article = container.querySelector('article')
+      expect(article?.style.boxShadow).toBe('0 0 0 2px var(--c-signal)')
+    })
+
+    it('does not apply focus ring shadow when isFocused is false', () => {
+      const { container } = renderWithRouter(<TaskCard task={mockTask} isFocused={false} />)
+      const article = container.querySelector('article')
+      expect(article?.style.boxShadow).not.toContain('2px')
+    })
+
+    it('combines focus ring and new indicator shadows when both true', () => {
+      const { container } = renderWithRouter(
+        <TaskCard task={mockTask} isFocused={true} isNew={true} />
+      )
+      const article = container.querySelector('article')
+      // Should have both inset shadow (new) and focus ring shadow (focused)
+      expect(article?.style.boxShadow).toContain('inset 1px 0 0')
+      expect(article?.style.boxShadow).toContain('0 0 0 2px')
     })
   })
 
@@ -161,17 +183,15 @@ describe('TaskCard', () => {
       clearTimeoutSpy.mockRestore()
     })
 
-    it('applies inset shadow class with transition for fade effect', () => {
+    it('applies inset shadow via inline style for fade effect', () => {
       const { container } = renderWithRouter(
         <TaskCard task={mockTask} isNew={true} />
       )
       const article = container.querySelector('article')
-      const className = article?.className || ''
 
-      // Should have shadow and transition classes for fade
-      expect(className).toContain('shadow-[inset_1px_0_0_var(--c-signal)]')
-      expect(className).toContain('transition-')
-      expect(className).toContain('duration-')
+      // Should have shadow via inline style
+      expect(article?.style.boxShadow).toBe('inset 1px 0 0 var(--c-signal)')
+      expect(article?.style.transition).toBe('box-shadow 8000ms')
     })
 
     it('has correct data-new attribute and shadow styling', () => {
@@ -181,11 +201,9 @@ describe('TaskCard', () => {
       const article = container.querySelector('article[data-new]')
       expect(article).toBeInTheDocument()
 
-      // Verify the shadow and transition classes are present
-      const className = article?.className || ''
-      expect(className).toContain('data-[new]:shadow-')
-      expect(className).toContain('data-[new]:transition-[box-shadow]')
-      expect(className).toContain('data-[new]:duration-[8000ms]')
+      // Verify the shadow and transition via inline styles
+      expect(article?.style.boxShadow).toBe('inset 1px 0 0 var(--c-signal)')
+      expect(article?.style.transition).toBe('box-shadow 8000ms')
     })
 
     it('does not apply data-new when isNew is false', () => {
