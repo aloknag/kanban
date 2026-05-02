@@ -77,8 +77,9 @@ export interface Epic {
   title: string;
   assignee: string | null;
   column_id: number;
-  task_count?: number;
-  done_count?: number;
+  task_count: number;
+  done_count: number;
+  position?: number;
   created_at?: string;
   updated_at?: string;
   excerpt?: string;
