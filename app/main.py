@@ -235,7 +235,7 @@ def create_app(data_folder: Path) -> FastAPI:
             )
             row = await cursor.fetchone()
             if not row:
-                return {"error": "Not found"}, 404
+                raise HTTPException(status_code=404, detail="Not found")
 
             content, content_error = read_content(row[3], data_folder)
             excerpt = get_excerpt_cached(row[3], data_folder)
@@ -415,7 +415,7 @@ def create_app(data_folder: Path) -> FastAPI:
             )
             row = await cursor.fetchone()
             if not row:
-                return {"error": "Not found"}, 404
+                raise HTTPException(status_code=404, detail="Not found")
 
             content, content_error = read_content(row[3], data_folder)
             excerpt = get_excerpt_cached(row[3], data_folder)

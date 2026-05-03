@@ -71,3 +71,9 @@ Avoid: Treat Docker Compose as the only valid acceptance environment; any API co
 - **Who/where**: `app/main.py` in `create_epic` endpoint.
 - **Where it should have been caught**: Backend integration/unit testing for API endpoints.
 - **What to avoid**: Assuming all keys in a request body are present, especially if they are optional in the data model.
+
+## Bug ID: #41
+- **Why introduced**: Incorrect API implementation returned HTTP 200 with an error object rather than using HTTP 404 for missing resources.
+- **Who/where**: `app/main.py` in `get_task` and `get_epic` endpoints.
+- **Where it should have been caught**: Backend API contract testing.
+- **What to avoid**: Using 200 OK for error responses; always use the correct semantic HTTP status code for errors (e.g., 404 for missing items).
