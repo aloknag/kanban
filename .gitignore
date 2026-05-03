@@ -31,6 +31,16 @@ playwright-report/
 
 # Git worktrees
 .worktrees/
+kanban-worktrees/
+
+# Docker
+.env
+.env.local
+docker-compose.override.yml
+
+# Data folder (user-specific)
+data/
+!data/.gitkeep
 
 # Frontend
 frontend/node_modules/

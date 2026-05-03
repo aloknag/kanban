@@ -1,0 +1,198 @@
+kind: pipeline
+type: docker
+name: kanban-build-deploy
+
+trigger:
+  branch:
+    - main
+    - develop
+  event:
+    - push
+    - pull_request
+
+# Shared environment across all steps
+environment:
+  DATA_DIR: ./data
+  DOCKER_BUILDKIT: 1
+
+steps:
+  # Step 1: Prepare environment
+  - name: prepare
+    image: alpine:latest
+    commands:
+      - echo "Preparing environment..."
+      - mkdir -p ./data/epics ./data/tasks
+      - ls -la ./data/
+
+  # Step 2: Build backend image
+  - name: build-backend
+    image: docker:dind
+    volumes:
+      - name: docker-socket
+        path: /var/run/docker.sock
+    environment:
+      DOCKER_HOST: unix:///var/run/docker.sock
+    commands:
+      - echo "Building backend Docker image..."
+      - docker build -f Dockerfile.backend -t kanban-backend:${DRONE_COMMIT_SHA:0:7} -t kanban-backend:latest .
+      - docker images | grep kanban-backend
+
+  # Step 3: Build frontend image
+  - name: build-frontend
+    image: docker:dind
+    volumes:
+      - name: docker-socket
+        path: /var/run/docker.sock
+    environment:
+      DOCKER_HOST: unix:///var/run/docker.sock
+    commands:
+      - echo "Building frontend Docker image..."
+      - docker build -f Dockerfile.frontend -t kanban-frontend:${DRONE_COMMIT_SHA:0:7} -t kanban-frontend:latest .
+      - docker images | grep kanban-frontend
+
+  # Step 4: Start services with docker-compose
+  - name: start-services
+    image: docker/compose:latest
+    volumes:
+      - name: docker-socket
+        path: /var/run/docker.sock
+    environment:
+      DOCKER_HOST: unix:///var/run/docker.sock
+      DATA_DIR: ./data
+    commands:
+      - echo "Starting services with docker-compose..."
+      - docker-compose -p kanban-ci up -d
+      - sleep 10  # Wait for services to be healthy
+      - docker-compose -p kanban-ci ps
+
+  # Step 5: Health check
+  - name: health-check
+    image: curlimages/curl:latest
+    commands:
+      - echo "Checking backend health..."
+      - |
+        for i in {1..30}; do
+          if curl -f http://localhost:8000/api/columns > /dev/null 2>&1; then
+            echo "Backend is healthy!"
+            exit 0
+          fi
+          echo "Attempt $i/30 - waiting for backend..."
+          sleep 2
+        done
+        echo "Backend health check failed!"
+        exit 1
+
+  # Step 6: Run backend tests
+  - name: test-backend
+    image: python:3.12-slim
+    environment:
+      DATA_DIR: ./data
+      PYTHONUNBUFFERED: 1
+    commands:
+      - echo "Installing backend dependencies..."
+      - pip install -q uv
+      - uv sync --frozen
+      - echo "Running backend tests..."
+      - .venv/Scripts/pytest tests/ -v --tb=short
+
+  # Step 7: Run frontend tests (unit tests)
+  - name: test-frontend-unit
+    image: node:20-alpine
+    commands:
+      - echo "Installing frontend dependencies..."
+      - cd frontend && npm ci
+      - echo "Running frontend unit tests..."
+      - npm run test -- --run
+
+  # Step 8: Run frontend type checks
+  - name: test-frontend-types
+    image: node:20-alpine
+    commands:
+      - echo "Running TypeScript checks..."
+      - cd frontend && npm ci
+      - npm run type-check
+
+  # Step 9: Backend linting
+  - name: lint-backend
+    image: python:3.12-slim
+    commands:
+      - echo "Running backend linting..."
+      - pip install -q uv
+      - uv sync --frozen
+      - .venv/Scripts/ruff check app/
+
+  # Step 10: Frontend linting
+  - name: lint-frontend
+    image: node:20-alpine
+    commands:
+      - echo "Running frontend linting..."
+      - cd frontend && npm ci
+      - npm run lint
+
+  # Step 11: Build frontend production bundle
+  - name: build-frontend-bundle
+    image: node:20-alpine
+    commands:
+      - echo "Building frontend production bundle..."
+      - cd frontend && npm ci
+      - npm run build
+
+  # Step 12: Deployment status
+  - name: deploy-status
+    image: docker/compose:latest
+    volumes:
+      - name: docker-socket
+        path: /var/run/docker.sock
+    environment:
+      DOCKER_HOST: unix:///var/run/docker.sock
+    commands:
+      - echo "========================================"
+      - echo "Deployment Complete"
+      - echo "========================================"
+      - docker-compose -p kanban-ci ps
+      - echo ""
+      - echo "Access:"
+      - echo "  Frontend: http://localhost:5173"
+      - echo "  Backend:  http://localhost:8000/api"
+      - echo "  Docs:     http://localhost:8000/docs"
+      - echo ""
+      - echo "Data folder: $(pwd)/data"
+      - ls -la ./data/
+
+  # Step 13: Cleanup (optional - disable for debugging)
+  # - name: cleanup
+  #   image: docker/compose:latest
+  #   volumes:
+  #     - name: docker-socket
+  #       path: /var/run/docker.sock
+  #   environment:
+  #     DOCKER_HOST: unix:///var/run/docker.sock
+  #   commands:
+  #     - echo "Cleaning up..."
+  #     - docker-compose -p kanban-ci down
+  #   when:
+  #     status: [success, failure]
+
+volumes:
+  - name: docker-socket
+    host:
+      path: /var/run/docker.sock
+
+---
+
+# Notification on failure
+kind: pipeline
+type: docker
+name: kanban-notify-failure
+
+trigger:
+  status:
+    - failure
+
+steps:
+  - name: notify
+    image: alpine:latest
+    commands:
+      - echo "Pipeline failed for commit ${DRONE_COMMIT_SHA}"
+      - echo "Repository: ${DRONE_REPO}"
+      - echo "Branch: ${DRONE_BRANCH}"

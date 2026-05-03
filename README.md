@@ -4,7 +4,27 @@ A local-only Kanban board where AI agents author work as Markdown files on disk 
 
 ## Quick Start
 
-### Prerequisites
+### Option 1: Docker (Recommended)
+
+**Prerequisites:**
+- Docker 20.10+
+- Docker Compose 2.0+
+
+**Start both backend and frontend:**
+```bash
+docker compose up -d
+```
+
+Access:
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:8000/api
+- Swagger Docs: http://localhost:8000/docs
+
+**See:** [Docker Deployment Guide](docs/DOCKER.md) for full documentation.
+
+### Option 2: Local Development
+
+**Prerequisites:**
 - Python 3.12+
 - `uv` package manager
 - Node.js 18+ (for frontend, optional)
@@ -140,6 +160,71 @@ Path("/data/tasks/setup.md").write_text("# Setup DB schema\n... updated ...")
 - **Path validation:** All `content_path` values are validated to prevent traversal attacks (`../../../etc/passwd`)
 - **Rejected patterns:** Absolute paths, symlink escapes (resolve with `strict=True`), paths outside data folder
 - **Markdown:** Rendered client-side; server returns raw text
+
+## CI/CD Pipeline
+
+### Drone CI
+
+Automated build, test, and deploy pipeline on every push to `main` or `develop` branches.
+
+**Pipeline Stages:**
+1. Build backend Docker image
+2. Build frontend Docker image
+3. Start services with docker-compose
+4. Health checks
+5. Run backend tests (pytest)
+6. Run frontend unit tests (Vitest)
+7. Run TypeScript checks
+8. Backend linting (Ruff)
+9. Frontend linting (ESLint)
+10. Build frontend production bundle
+11. Deploy status report
+
+**Data Folder:**
+- Local `./data/` folder is mounted in containers
+- Gitignored for user-specific state
+- `.gitkeep` ensures directory exists
+
+**View Pipeline:**
+- See [docs/DRONE_CI.md](docs/DRONE_CI.md) for full documentation
+- Configuration: `.drone.yml`
+
+---
+
+## Docker Deployment
+
+### Building & Running with Docker
+
+See the comprehensive [Docker Deployment Guide](docs/DOCKER.md) for:
+- Service architecture & configuration
+- Development workflow with Docker
+- Data persistence & volumes
+- Networking & port management
+- Troubleshooting & production deployment
+
+**Quick commands:**
+```bash
+# Start services
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Run tests inside container
+docker compose exec backend pytest tests/ -v
+
+# Stop services
+docker compose down
+```
+
+### Images
+
+- **Backend:** `kanban-backend` (Python 3.12 + FastAPI)
+- **Frontend:** `kanban-frontend` (Node.js 20 + React/Vite)
+- **Network:** `kanban-network` (bridge)
+- **Volume:** `kanban-data` (persistent data storage)
+
+---
 
 ## Testing
 

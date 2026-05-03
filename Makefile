@@ -1,4 +1,4 @@
-.PHONY: dev build start test lint type clean
+.PHONY: dev build start test lint type clean docker-up docker-down docker-build docker-logs docker-ps docker-clean
 
 dev:
 	@if [ -z "$(FOLDER)" ]; then echo "Usage: make dev FOLDER=/path/to/data"; exit 1; fi
@@ -34,3 +34,34 @@ clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete
 	rm -rf .pytest_cache
+
+# Docker commands
+docker-up:
+	@echo "Starting Docker services..."
+	docker compose up -d
+	@echo "Services are running:"
+	@docker compose ps
+	@echo ""
+	@echo "Access:"
+	@echo "  Frontend: http://localhost:5173"
+	@echo "  Backend:  http://localhost:8000/api"
+	@echo "  Swagger:  http://localhost:8000/docs"
+
+docker-down:
+	@echo "Stopping Docker services..."
+	docker compose down
+
+docker-build:
+	@echo "Building Docker images..."
+	docker compose build
+
+docker-logs:
+	docker compose logs -f
+
+docker-ps:
+	docker compose ps
+
+docker-clean:
+	@echo "Removing containers, images, and volumes..."
+	docker compose down -v
+	@echo "Cleanup complete"
