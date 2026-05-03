@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ThemeProvider } from '../../system/ThemeProvider'
 import { TopRule } from './TopRule'
 
 describe('TopRule', () => {
@@ -21,7 +22,9 @@ describe('TopRule', () => {
     })
     return render(
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>{component}</BrowserRouter>
+        <BrowserRouter>
+          <ThemeProvider>{component}</ThemeProvider>
+        </BrowserRouter>
       </QueryClientProvider>
     )
   }
@@ -62,10 +65,23 @@ describe('TopRule', () => {
     expect(banner).not.toHaveClass('h-margin')
   })
 
-  it('renders theme toggle button stub (◑)', () => {
+  it('renders theme toggle button (◑)', () => {
     renderWithRouter(<TopRule />)
     const themeToggle = screen.getByLabelText('theme toggle')
     expect(themeToggle).toHaveTextContent('◑')
+  })
+
+  it('theme toggle button is clickable', () => {
+    renderWithRouter(<TopRule />)
+    const themeToggle = screen.getByLabelText('theme toggle')
+    expect(themeToggle).toBeEnabled()
+    expect(themeToggle.tagName).toBe('BUTTON')
+  })
+
+  it('theme toggle button has title attribute', () => {
+    renderWithRouter(<TopRule />)
+    const themeToggle = screen.getByLabelText('theme toggle')
+    expect(themeToggle).toHaveAttribute('title', 'Toggle theme (t)')
   })
 
   it('renders close button stub (✕)', () => {

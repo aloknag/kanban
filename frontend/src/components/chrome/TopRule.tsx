@@ -10,10 +10,12 @@
 
 import { useLocation, Link } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
+import { useTheme } from '../../system/ThemeProvider'
 import { PollIndicator } from '../../system/PollIndicator'
 
 export function TopRule() {
   const location = useLocation()
+  const { toggleTheme } = useTheme()
   const [time, setTime] = useState<string>('')
   const glyphRef = useRef<HTMLSpanElement>(null)
 
@@ -76,9 +78,14 @@ export function TopRule() {
           ◇
         </span>
         <PollIndicator glyphRef={glyphRef} />
-        <span className="text-ink3 cursor-pointer hover:text-ink transition-colors" aria-label="theme toggle">
+        <button
+          onClick={toggleTheme}
+          className="text-ink3 cursor-pointer hover:text-ink transition-colors bg-transparent border-0 p-0"
+          aria-label="theme toggle"
+          title="Toggle theme (t)"
+        >
           ◑
-        </span>
+        </button>
         <span className="text-ink3 cursor-pointer hover:text-ink transition-colors" aria-label="close">
           ✕
         </span>

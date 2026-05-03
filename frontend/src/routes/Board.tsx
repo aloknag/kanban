@@ -41,6 +41,7 @@ import { KeyboardSheet } from '../components/chrome/KeyboardSheet'
 import { SortableColumn } from '../components/board/SortableColumn'
 import { TaskDragOverlay } from '../components/board/TaskDragOverlay'
 import { useHotkeys } from '../system/HotkeyProvider'
+import { useTheme } from '../system/ThemeProvider'
 import {
   getColumns,
   getTasks,
@@ -55,6 +56,7 @@ import { shouldRejectDragEnd } from '../lib/dndGuards'
 export function Board() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const { toggleTheme } = useTheme()
   const [recentlyUpdatedTaskIds, setRecentlyUpdatedTaskIds] = useState<
     Set<number>
   >(new Set())
@@ -369,14 +371,8 @@ export function Board() {
       // TODO: Focus the filter input in TopRule
     },
     '?': () => setKeyboardSheetOpen(!keyboardSheetOpen),
-    t: () => {
-      const html = document.documentElement
-      const currentTheme = html.getAttribute('data-theme')
-      const newTheme = currentTheme === 'dark' ? 'light' : 'dark'
-      html.setAttribute('data-theme', newTheme)
-      localStorage.setItem('theme', newTheme)
-    },
-  }), [tasks, focusedCardId, navigate, keyboardSheetOpen, handleToggleCollapse])
+    t: toggleTheme,
+  }), [tasks, focusedCardId, navigate, keyboardSheetOpen, handleToggleCollapse, toggleTheme])
 
   // Register hotkey handlers
   useHotkeys(hotkeys)

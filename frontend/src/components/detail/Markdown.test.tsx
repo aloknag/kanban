@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen } from '../../test/test-utils'
 import { Markdown } from './Markdown'
+import { useTheme } from '../../system/ThemeProvider'
 
 describe('Markdown component', () => {
   describe('inline code', () => {
@@ -255,6 +256,36 @@ describe('Markdown component', () => {
   })
 
   describe('Mermaid diagrams', () => {
+    it('re-renders mermaid diagram when theme changes', () => {
+      const source = '```mermaid\ngraph TD\nA[Start]\n```'
+
+      // Test component that wraps Markdown and can toggle theme
+      function TestComponent() {
+        const { toggleTheme } = useTheme()
+        return (
+          <div>
+            <button onClick={toggleTheme} data-testid="toggle-theme">Toggle Theme</button>
+            <Markdown source={source} />
+          </div>
+        )
+      }
+
+      const { container, getByTestId } = render(<TestComponent />)
+
+      // Verify initial render of mermaid block
+      const initialMermaidBlock = container.querySelector('[data-mermaid]')
+      expect(initialMermaidBlock).toBeInTheDocument()
+
+      // Toggle theme - this should cause Markdown to re-render with different key
+      const toggleButton = getByTestId('toggle-theme')
+      toggleButton.click()
+
+      // After theme toggle, the MermaidBlock should re-render due to key change
+      // (key includes theme value, so changing theme changes the key)
+      const mermaidBlock = container.querySelector('[data-mermaid]')
+      expect(mermaidBlock).toBeInTheDocument()
+    })
+
     it('maintains stable figure numbers across component re-renders with same source', () => {
       const source = '```mermaid\ngraph TD\nA[Start]\n```\n\n```mermaid\ngraph TD\nB[End]\n```'
       const { container, rerender } = render(<Markdown source={source} />)

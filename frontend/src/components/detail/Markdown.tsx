@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm'
 import { Components } from 'react-markdown'
 import type { Element as HastElement } from 'hast'
 import { MermaidBlock } from './MermaidBlock'
+import { useTheme } from '../../system/ThemeProvider'
 
 interface MarkdownProps {
   source: string
@@ -46,6 +47,8 @@ function InlineCode({ children }: PropsWithChildren) {
 
 
 export function Markdown({ source }: MarkdownProps) {
+  const { theme } = useTheme()
+
   // Track h1 count and figure count during parsing
   // Use useRef to maintain stable counters across re-renders of the same source
   const h1CountRef = useRef(0)
@@ -109,7 +112,14 @@ export function Markdown({ source }: MarkdownProps) {
 
     if (language === 'mermaid') {
       figureCountRef.current += 1
-      return <MermaidBlock code={codeContent} figureNumber={figureCountRef.current} />
+      // Include theme in key to force re-render when theme changes
+      return (
+        <MermaidBlock
+          key={`mermaid-${figureCountRef.current}-${theme}`}
+          code={codeContent}
+          figureNumber={figureCountRef.current}
+        />
+      )
     }
 
     return (

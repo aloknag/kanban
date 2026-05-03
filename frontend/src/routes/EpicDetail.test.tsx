@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { EpicDetail } from './EpicDetail'
 import { createQueryClient } from '../lib/queryClient'
+import { ThemeProvider } from '../system/ThemeProvider'
 import * as api from '../lib/api'
 
 // Mock useParams to return a valid epic ID
@@ -50,11 +51,13 @@ describe('EpicDetail route error handling and loading state', () => {
   const renderWithProviders = () => {
     const queryClient = createQueryClient()
     return render(
-      <BrowserRouter>
-        <QueryClientProvider client={queryClient}>
-          <EpicDetail />
-        </QueryClientProvider>
-      </BrowserRouter>
+      <ThemeProvider>
+        <BrowserRouter>
+          <QueryClientProvider client={queryClient}>
+            <EpicDetail />
+          </QueryClientProvider>
+        </BrowserRouter>
+      </ThemeProvider>
     )
   }
 

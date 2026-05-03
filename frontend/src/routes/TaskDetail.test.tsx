@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { TaskDetail } from './TaskDetail'
 import { createQueryClient } from '../lib/queryClient'
+import { ThemeProvider } from '../system/ThemeProvider'
 import * as api from '../lib/api'
 
 // Mock useParams to return a valid task ID
@@ -63,11 +64,13 @@ describe('TaskDetail route error handling and loading state', () => {
   const renderWithProviders = () => {
     const queryClient = createQueryClient()
     return render(
-      <BrowserRouter>
-        <QueryClientProvider client={queryClient}>
-          <TaskDetail />
-        </QueryClientProvider>
-      </BrowserRouter>
+      <ThemeProvider>
+        <BrowserRouter>
+          <QueryClientProvider client={queryClient}>
+            <TaskDetail />
+          </QueryClientProvider>
+        </BrowserRouter>
+      </ThemeProvider>
     )
   }
 

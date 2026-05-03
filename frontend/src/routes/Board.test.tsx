@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { Board } from './Board'
 import { HotkeyProvider } from '../system/HotkeyProvider'
+import { ThemeProvider } from '../system/ThemeProvider'
 import { createQueryClient } from '../lib/queryClient'
 import * as api from '../lib/api'
 
@@ -49,11 +50,13 @@ describe('Board', () => {
     const queryClient = createQueryClient()
     return render(
       <BrowserRouter>
-        <QueryClientProvider client={queryClient}>
-          <HotkeyProvider>
-            {component}
-          </HotkeyProvider>
-        </QueryClientProvider>
+        <ThemeProvider>
+          <QueryClientProvider client={queryClient}>
+            <HotkeyProvider>
+              {component}
+            </HotkeyProvider>
+          </QueryClientProvider>
+        </ThemeProvider>
       </BrowserRouter>
     )
   }
