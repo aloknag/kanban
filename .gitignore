@@ -65,3 +65,6 @@ Thumbs.db
 
 # Evidences for Bug reports
 evidences/
+
+# Playwright MCP session data
+.playwright-mcp/
