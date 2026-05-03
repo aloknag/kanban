@@ -95,7 +95,8 @@ Commit `docs/e2e_test_cases.md`.
 
 ### 1. Write a Playwright reproduction test
 Write a self-contained Playwright test (JS or Python) that reproduces the bug.
-Save to `tests/e2e/bug_<N>.spec.js` (or `.py`). It must fail on the current build.
+Save to `tests/e2e/<name_of_test>.spec.js` (or `.py`). It must fail on the current build.
+Folder for QA repro scripts: `C:\Users\nagal\Documents\ai_projects\kanban\tests\e2e\`
 
 ### 2. Capture evidence
 - **Browser bug (playwright-mcp):** screenshot is mandatory. Save to `evidences/bug-<N>.png`.
@@ -151,7 +152,7 @@ Write a 2-line summary to the user:
 - Tracking: `aloknag/testfiles` GitHub issues
 - Project board #1: `https://github.com/users/aloknag/projects/1`
 - Evidence: `evidences/` (not tracked by git)
-- Repro tests: `tests/e2e/`
+- Repro tests: `C:\Users\nagal\Documents\ai_projects\kanban\tests\e2e\`
 
 ## Checklist — verify ALL before stopping
 - [ ] `docs/e2e_test_cases.md` read — known coverage understood
@@ -177,4 +178,9 @@ docker compose exec backend sh -c "mkdir -p /data/tasks && echo '# Test content'
 curl -i -X POST http://localhost:8000/api/tasks \
      -H "Content-Type: application/json" \
      -d '{"title": "Valid Path Task", "column_id": 1, "content_path": "tasks/valid-curl.md"}'
+```
+
+### Running tests written by QA
+```bash
+cd "C:\Users\nagal\Documents\ai_projects\kanban" && npx playwright test tests/e2e --reporter=list
 ```
