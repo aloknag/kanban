@@ -11,6 +11,24 @@ Avoid: Never pass `var(--x)` to third-party libraries that parse values at init 
 
 ---
 
+### BUG-001 (#34): Mermaid diagrams always render as error
+
+Why: `Markdown.tsx` read `codeNode?.value` to extract fenced-block source, but HAST element nodes have no `value` — the text lives in `codeNode.children[0].value`. The bug was latent since T3.2 (f4cb6dd) because the placeholder MermaidBlock just printed raw text; it only surfaced in T3.3 (2c0b0a7) when real `mermaid.render()` was wired up.  
+Who: `frontend/src/components/detail/Markdown.tsx:110` — incorrect HAST property access, present since first commit of the component.  
+Where: Should have been caught by a unit test asserting the `code` prop passed to `MermaidBlock` equals the diagram source. No such test existed.  
+Avoid: When integrating AST-based libraries (hast, mdast, remark), verify the exact node shape with a quick `console.log` or node script before writing extraction code. Always add a test that pins the value flowing into a rendering boundary.
+
+---
+
+### BUG-002 (#35): Task card title click doesn't navigate to detail page
+
+Why: `SortableTaskCard` spreads `{...listeners}` from `useDraggable` onto the entire card wrapper. dnd-kit captures `onPointerDown` immediately with no activation threshold, so child `<Link>` clicks never complete navigation.  
+Who: `frontend/src/routes/Board.tsx` — `useSensor(PointerSensor)` registered without `activationConstraint`, present since DnD was first added (68d3527).  
+Where: Should have been caught by an E2E test clicking a task card title and asserting the URL changed to `/tasks/{id}`.  
+Avoid: When wrapping interactive elements with dnd-kit draggables, always set `activationConstraint: { distance: N }` so taps pass through to child links and buttons.
+
+---
+
 ### Backend shipped without CORS headers
 
 Why: CORS was never needed in dev because the Vite proxy handles API calls server-side, masking the requirement for the production build.

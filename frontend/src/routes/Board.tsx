@@ -84,8 +84,9 @@ export function Board() {
   const [activeTaskDrag, setActiveTaskDrag] = useState<Task | null>(null)
 
   // Set up DnD sensors for pointer and keyboard
+  // distance: 8 lets short taps pass through to child Links; drag only activates after 8px movement
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })

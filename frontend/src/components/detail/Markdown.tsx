@@ -104,10 +104,11 @@ export function Markdown({ source }: MarkdownProps) {
   pre: ({ node, children, ...props }: PreHandlerProps) => {
     // Check if this is a mermaid block
     // node.children contains AST nodes, meta and value are dynamic properties from remark AST
-    const codeNode = node?.children?.[0] as (HastElement & { value?: string; meta?: string }) | undefined
+    const codeNode = node?.children?.[0] as (HastElement & { meta?: string }) | undefined
     const codeNodeMeta = codeNode?.meta
     const codeNodeClassName = codeNode?.properties?.className as string[] | undefined
-    const codeContent = codeNode?.value || ''
+    const codeTextNode = codeNode?.children?.[0] as { value?: string } | undefined
+    const codeContent = codeTextNode?.value ?? ''
     const language = codeNodeMeta || extractLanguage(codeNodeClassName?.[0] || '')
 
     if (language === 'mermaid') {

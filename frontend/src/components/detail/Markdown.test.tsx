@@ -1,7 +1,18 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '../../test/test-utils'
 import { Markdown } from './Markdown'
 import { useTheme } from '../../system/ThemeProvider'
+
+// Mock MermaidBlock so we can inspect the code prop without running mermaid.render() in jsdom.
+// The mock renders the same landmarks ([data-mermaid], [data-figure-caption]) so existing
+// tests that query those attributes are unaffected.
+vi.mock('./MermaidBlock', () => ({
+  MermaidBlock: ({ code, figureNumber }: { code: string; figureNumber: number }) => (
+    <figure data-mermaid data-figure={figureNumber} data-code={code}>
+      <span data-figure-caption className="font-mono">{`FIG. ${figureNumber}`}</span>
+    </figure>
+  ),
+}))
 
 describe('Markdown component', () => {
   describe('inline code', () => {
@@ -324,6 +335,15 @@ describe('Markdown component', () => {
       expect(caption).toBeInTheDocument()
       expect(caption?.className).toContain('font-mono')
       expect(caption?.textContent).toContain('FIG. 1')
+    })
+
+    it('passes diagram source text to MermaidBlock via code prop', () => {
+      const source = '```mermaid\nflowchart LR\n    A --> B\n```'
+      const { container } = render(<Markdown source={source} />)
+      const block = container.querySelector('[data-mermaid]')
+      expect(block).toBeInTheDocument()
+      // data-code must equal the fenced-block body — not an empty string
+      expect(block?.getAttribute('data-code')).toBe('flowchart LR\n    A --> B\n')
     })
   })
 })
