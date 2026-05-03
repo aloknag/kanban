@@ -10,6 +10,7 @@
  * Per FrontEngDesign.md §6.3 (DnD):
  * - When isDraggable, shows grab cursor
  * - When isDragging, shows dashed outline + opacity: 0.85
+ * - When isDropTarget, shows --c-signal left rule on hover (for task drops)
  */
 
 import { CSSProperties } from 'react'
@@ -25,8 +26,12 @@ type Props = {
   onToggleCollapse?: () => void
   isDraggable?: boolean
   isDragging?: boolean
+  isDropTarget?: boolean
+  isDropActive?: boolean
   dndAttributes?: DraggableAttributes
   dndListeners?: SyntheticListenerMap
+  dndDropAttributes?: DraggableAttributes
+  dndDropListeners?: SyntheticListenerMap
   style?: CSSProperties
 }
 
@@ -38,8 +43,12 @@ export function ColumnHeader({
   onToggleCollapse,
   isDraggable = false,
   isDragging = false,
+  isDropTarget = false,
+  isDropActive = false,
   dndAttributes,
   dndListeners,
+  dndDropAttributes,
+  dndDropListeners,
   style,
 }: Props) {
   return (
@@ -48,13 +57,19 @@ export function ColumnHeader({
         isDraggable ? 'cursor-grab' : ''
       }`}
       data-dragging={isDragging || undefined}
+      data-drop-active={isDropActive || undefined}
       style={{
         ...style,
         outline: isDragging ? '1px dashed var(--c-signal)' : 'none',
         opacity: isDragging ? 0.85 : 1,
+        borderLeft: isDropActive ? '1px solid var(--c-signal)' : 'none',
+        paddingLeft: isDropActive ? '15px' : '0px',
+        transition: 'all 80ms ease-out',
       }}
       {...dndAttributes}
       {...dndListeners}
+      {...(isDropTarget && dndDropAttributes ? dndDropAttributes : {})}
+      {...(isDropTarget && dndDropListeners ? dndDropListeners : {})}
     >
       <div className="flex items-baseline gap-tight">
         <h2 className="text-label font-mono text-ink uppercase tracking-wider">

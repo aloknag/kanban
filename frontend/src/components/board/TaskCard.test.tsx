@@ -187,7 +187,7 @@ describe('TaskCard', () => {
       const { container } = renderWithRouter(
         <TaskCard task={mockTask} isNew={true} />
       )
-      const article = container.querySelector('article')
+      const article = container.querySelector('article') as HTMLElement | null
 
       // Should have shadow via inline style
       expect(article?.style.boxShadow).toBe('inset 1px 0 0 var(--c-signal)')
@@ -198,7 +198,7 @@ describe('TaskCard', () => {
       const { container } = renderWithRouter(
         <TaskCard task={mockTask} isNew={true} />
       )
-      const article = container.querySelector('article[data-new]')
+      const article = container.querySelector('article[data-new]') as HTMLElement | null
       expect(article).toBeInTheDocument()
 
       // Verify the shadow and transition via inline styles

@@ -8,6 +8,7 @@ import {
   getTaskComments,
   getEpicComments,
   patchColumnsReorder,
+  patchTask,
 } from './api';
 
 declare global {
@@ -380,6 +381,53 @@ describe('API Client', () => {
       mockFetch.mockRejectedValueOnce(new Error('Network failure'));
 
       await expect(patchColumnsReorder([1, 2])).rejects.toThrow('Network failure');
+    });
+  });
+
+  describe('patchTask', () => {
+    it('calls PATCH /api/tasks/:id with column_id', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 1, column_id: 2 }),
+      });
+
+      await patchTask(1, { column_id: 2 });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:8000/api/tasks/1',
+        expect.objectContaining({
+          method: 'PATCH',
+          headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ column_id: 2 }),
+        })
+      );
+    });
+
+    it('returns updated task on success', async () => {
+      const updated = { id: 1, column_id: 2, title: 'Task 1' };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => updated,
+      });
+
+      const result = await patchTask(1, { column_id: 2 });
+      expect(result).toEqual(updated);
+    });
+
+    it('throws on API error', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        statusText: 'Bad Request',
+      });
+
+      await expect(patchTask(1, { column_id: 2 })).rejects.toThrow('API error: 400 Bad Request');
+    });
+
+    it('throws on network error', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('Network failure'));
+
+      await expect(patchTask(1, { column_id: 2 })).rejects.toThrow('Network failure');
     });
   });
 });

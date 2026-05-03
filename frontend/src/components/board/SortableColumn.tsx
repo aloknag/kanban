@@ -3,17 +3,19 @@
  *
  * Wraps the Column component with DnD functionality.
  * Per FrontEngDesign.md §6.3:
- * - Header is draggable (grab cursor)
- * - On drag, shows dashed outline + opacity: 0.85
- * - Other columns shift in 80ms
- * - Drop snaps in 120ms
+ * - Header is draggable (grab cursor) for column reordering
+ * - Header is also droppable to accept tasks from other columns
+ * - On task drop, shows --c-signal left rule
+ * - Tasks can be dragged with opacity: 0.4 placeholder
+ * - On drop, card flies in 120ms with --m-easing
  */
 
 import { useSortable } from '@dnd-kit/sortable'
+import { useDroppable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { Column as ColumnType, Task } from '../../lib/api'
 import { ColumnHeader } from './ColumnHeader'
-import { TaskCard } from './TaskCard'
+import { SortableTaskCard } from './SortableTaskCard'
 import { EmptyColumn } from './EmptyColumn'
 
 type Props = {
@@ -46,14 +48,28 @@ export function SortableColumn({
     isDragging,
   } = useSortable({ id: column.id })
 
+  const {
+    setNodeRef: setDropNodeRef,
+    isOver: isDropOver,
+  } = useDroppable({
+    id: `column-${column.id}`,
+    data: { type: 'Column', column },
+  })
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
   }
 
+  // Set drop target ref on both the section and header
+  const combinedRef = (el: HTMLElement | null) => {
+    setNodeRef(el)
+    setDropNodeRef(el)
+  }
+
   return (
     <section
-      ref={setNodeRef}
+      ref={combinedRef}
       style={style}
       data-column-id={column.id}
       className="mb-gutter"
@@ -68,6 +84,8 @@ export function SortableColumn({
         onToggleCollapse={onToggleCollapse}
         isDraggable={true}
         isDragging={isDragging}
+        isDropTarget={true}
+        isDropActive={isDropOver}
         dndAttributes={attributes}
         dndListeners={listeners}
       />
@@ -78,7 +96,7 @@ export function SortableColumn({
         ) : (
           <div className="space-y-card">
             {tasks.map(task => (
-              <TaskCard
+              <SortableTaskCard
                 key={task.id}
                 task={task}
                 isNew={recentlyUpdatedTaskIds.has(task.id)}

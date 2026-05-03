@@ -39,11 +39,13 @@ import { TopRule } from '../components/chrome/TopRule'
 import { Plate } from '../components/catalog/Plate'
 import { KeyboardSheet } from '../components/chrome/KeyboardSheet'
 import { SortableColumn } from '../components/board/SortableColumn'
+import { TaskDragOverlay } from '../components/board/TaskDragOverlay'
 import { useHotkeys } from '../system/HotkeyProvider'
 import {
   getColumns,
   getTasks,
   patchColumnsReorder,
+  patchTask,
   Column as ColumnType,
   Task,
 } from '../lib/api'
@@ -75,6 +77,9 @@ export function Board() {
 
   // DnD column reorder state (task #28)
   const [isReorderInFlight, setIsReorderInFlight] = useState(false)
+
+  // DnD task drag state (task #29)
+  const [activeTaskDrag, setActiveTaskDrag] = useState<Task | null>(null)
 
   // Set up DnD sensors for pointer and keyboard
   const sensors = useSensors(
@@ -227,9 +232,12 @@ export function Board() {
     (event: DragEndEvent) => {
       const { active, over } = event
 
+      // Clear active drag
+      setActiveTaskDrag(null)
+
       // Prevent concurrent drags while a PATCH is in-flight
       if (isReorderInFlight) {
-        console.warn('Column reorder in progress — ignoring concurrent drag')
+        console.warn('Drag in progress — ignoring concurrent drag')
         return
       }
 
@@ -237,42 +245,77 @@ export function Board() {
         return
       }
 
-      const oldIndex = sortedColumns.findIndex(c => c.id === active.id)
-      const newIndex = sortedColumns.findIndex(c => c.id === over.id)
+      // Determine if this is a task move (task-X to column-Y) or column reorder
+      const isTaskDrag = String(active.id).startsWith('task-')
+      const isColumnDrop = String(over.id).startsWith('column-')
 
-      if (oldIndex === -1 || newIndex === -1) {
-        return
+      if (isTaskDrag && isColumnDrop) {
+        // Task-to-column move
+        const taskId = parseInt(String(active.id).substring(5), 10) // Extract ID from "task-X"
+        const columnId = parseInt(String(over.id).substring(7), 10) // Extract ID from "column-X"
+
+        const taskToMove = tasks.find(t => t.id === taskId)
+        if (!taskToMove || taskToMove.column_id === columnId) {
+          return
+        }
+
+        // Optimistic update: move task in cache immediately
+        const updatedTasks = tasks.map(t =>
+          t.id === taskId ? { ...t, column_id: columnId } : t
+        )
+        queryClient.setQueryData(['tasks'], updatedTasks)
+
+        // Set in-flight flag
+        setIsReorderInFlight(true)
+
+        // Call API with optimistic update
+        patchTask(taskId, { column_id: columnId })
+          .catch(() => {
+            // On error, refetch to get the true state (rollback)
+            queryClient.invalidateQueries({ queryKey: ['tasks'] })
+          })
+          .finally(() => {
+            setIsReorderInFlight(false)
+          })
+      } else {
+        // Column reorder (existing logic)
+        const oldIndex = sortedColumns.findIndex(c => c.id === active.id)
+        const newIndex = sortedColumns.findIndex(c => c.id === over.id)
+
+        if (oldIndex === -1 || newIndex === -1) {
+          return
+        }
+
+        // Apply guard: prevent Done column moves
+        if (shouldRejectDragEnd(active.id, over.id, columns)) {
+          console.warn('Cannot reorder Done column — it must remain at bottom')
+          return
+        }
+
+        // Compute new order using the reducer as authoritative source
+        const newColumnsList = arrayMove(sortedColumns, oldIndex, newIndex)
+        const newIds = newColumnsList.map(c => c.id)
+        const newColumns = columnReorderReducer(columns, newIds)
+
+        // Optimistic update: update React Query cache immediately
+        queryClient.setQueryData(['columns'], newColumns)
+
+        // Set in-flight flag to prevent concurrent drags
+        setIsReorderInFlight(true)
+
+        // Call API
+        patchColumnsReorder(newIds)
+          .catch(() => {
+            // On error, refetch to get the true state
+            queryClient.invalidateQueries({ queryKey: ['columns'] })
+          })
+          .finally(() => {
+            // Clear in-flight flag when API call completes (success or error)
+            setIsReorderInFlight(false)
+          })
       }
-
-      // Apply guard: prevent Done column moves
-      if (shouldRejectDragEnd(active.id, over.id, columns)) {
-        console.warn('Cannot reorder Done column — it must remain at bottom')
-        return
-      }
-
-      // Compute new order using the reducer as authoritative source
-      const newColumnsList = arrayMove(sortedColumns, oldIndex, newIndex)
-      const newIds = newColumnsList.map(c => c.id)
-      const newColumns = columnReorderReducer(columns, newIds)
-
-      // Optimistic update: update React Query cache immediately
-      queryClient.setQueryData(['columns'], newColumns)
-
-      // Set in-flight flag to prevent concurrent drags
-      setIsReorderInFlight(true)
-
-      // Call API
-      patchColumnsReorder(newIds)
-        .catch(() => {
-          // On error, refetch to get the true state
-          queryClient.invalidateQueries({ queryKey: ['columns'] })
-        })
-        .finally(() => {
-          // Clear in-flight flag when API call completes (success or error)
-          setIsReorderInFlight(false)
-        })
     },
-    [sortedColumns, columns, queryClient, isReorderInFlight]
+    [sortedColumns, columns, tasks, queryClient, isReorderInFlight]
   )
 
   const isLoading = columnsLoading || tasksLoading
@@ -368,6 +411,17 @@ export function Board() {
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
+              onDragStart={(event) => {
+                // Track active task drag for visual feedback
+                const draggedId = event.active.id
+                if (String(draggedId).startsWith('task-')) {
+                  const taskId = parseInt(String(draggedId).substring(5), 10)
+                  const task = tasks.find(t => t.id === taskId)
+                  if (task) {
+                    setActiveTaskDrag(task)
+                  }
+                }
+              }}
               onDragEnd={handleDragEnd}
               accessibility={{
                 announcements,
@@ -399,6 +453,7 @@ export function Board() {
                   })}
                 </div>
               </SortableContext>
+              <TaskDragOverlay activeTask={activeTaskDrag} />
             </DndContext>
           )}
 

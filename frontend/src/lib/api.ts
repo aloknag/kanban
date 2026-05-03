@@ -223,3 +223,30 @@ export async function patchColumnsReorder(ids: number[]): Promise<any> {
 
   return await response.json();
 }
+
+/**
+ * Update a task (title, column_id, assignee, epic_id)
+ */
+export async function patchTask(
+  taskId: number,
+  updates: {
+    title?: string;
+    column_id?: number;
+    assignee?: string | null;
+    epic_id?: number | null;
+  }
+): Promise<Task> {
+  const response = await fetch(`${API_BASE}/tasks/${taskId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(updates),
+  });
+
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  }
+
+  return await response.json();
+}
