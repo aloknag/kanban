@@ -83,3 +83,9 @@ Avoid: Treat Docker Compose as the only valid acceptance environment; any API co
 - **Who/where**: `app/main.py` in `update_task` endpoint.
 - **Where it should have been caught**: Backend API contract testing.
 - **What to avoid**: Assuming incoming strings are not empty when the model expects a non-empty string.
+
+## Bug ID: #43
+- **Why introduced**: The API implementation of `get_epic` was incomplete and did not fetch linked tasks for an epic, nor did the frontend have navigation links to individual epic pages.
+- **Who/where**: `app/main.py` in `get_epic` endpoint, frontend routing issues.
+- **Where it should have been caught**: Frontend integration testing for the epic detail page.
+- **What to avoid**: Leaving API endpoints incomplete; always ensure that detail views are populated with all necessary related entities.

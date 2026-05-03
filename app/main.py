@@ -424,6 +424,26 @@ def create_app(data_folder: Path) -> FastAPI:
             content, content_error = read_content(row[3], data_folder)
             excerpt = get_excerpt_cached(row[3], data_folder)
 
+            # Get linked tasks
+            task_cursor = await db.execute(
+                "SELECT id, slug, title, content_path, assignee, column_id FROM tasks WHERE epic_id = ? ORDER BY created_at DESC",
+                (epic_id,)
+            )
+            tasks = []
+            for t_row in await task_cursor.fetchall():
+                tasks.append({
+                    "id": t_row[0],
+                    "slug": t_row[1],
+                    "title": t_row[2],
+                    "content_path": t_row[3],
+                    "assignee": t_row[4],
+                    "column_id": t_row[5],
+                })
+
+            # Get progress
+            task_count = len(tasks)
+            done_count = len([t for t in tasks if t["column_id"] == 3])
+
             result = {
                 "id": row[0],
                 "slug": row[1],
@@ -433,6 +453,9 @@ def create_app(data_folder: Path) -> FastAPI:
                 "excerpt": excerpt,
                 "assignee": row[4],
                 "column_id": row[5],
+                "task_count": task_count,
+                "done_count": done_count,
+                "tasks": tasks,
                 "created_at": row[6],
                 "updated_at": row[7],
             }
