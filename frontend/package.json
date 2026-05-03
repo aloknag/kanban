@@ -22,7 +22,7 @@
     "@fontsource-variable/jetbrains-mono": "^5.0.0",
     "@fontsource-variable/newsreader": "^5.0.0",
     "@tanstack/react-query": "^5.25.0",
-    "lucide-react": "^0.292.0",
+    "lucide-react": "^0.395.0",
     "mermaid": "^10.6.0",
     "react": "^19.0.0-beta",
     "react-dom": "^19.0.0-beta",

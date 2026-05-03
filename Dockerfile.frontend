@@ -1,0 +1,42 @@
+# Frontend - Node.js 20 with React/Vite (multi-stage build)
+
+# Stage 1: Build
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY frontend/package.json frontend/package-lock.json ./
+
+# Install dependencies
+RUN npm ci --legacy-peer-deps
+
+# Copy source code
+COPY frontend/ ./
+
+# Build production bundle
+# Note: vite.config.ts may output to ../app/static or dist/ depending on config
+# We build and then check which location has the dist files
+RUN npm run build && \
+    if [ -d "dist" ]; then ls -la dist/; elif [ -d "../app/static" ]; then mkdir -p dist && cp -r ../app/static/* dist/ || true; fi
+
+# Stage 2: Serve with minimal image
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install simple HTTP server
+RUN npm install -g serve
+
+# Copy built assets from builder (use the dist folder created above)
+COPY --from=builder /app/dist ./dist
+
+# Expose port
+EXPOSE 5173
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:5173/ || exit 1
+
+# Serve static files and proxy API requests
+CMD ["serve", "-s", "dist", "-l", "5173"]

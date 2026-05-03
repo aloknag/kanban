@@ -1,0 +1,56 @@
+version: '3.9'
+
+services:
+  # Backend - FastAPI server
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: kanban-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATA_DIR=/data
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - kanban-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/columns')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - kanban-network
+    restart: unless-stopped
+
+  # Frontend - React/Vite
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: kanban-frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      - VITE_API_BASE_URL=http://backend:8000/api
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5173/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - kanban-network
+    restart: unless-stopped
+
+volumes:
+  kanban-data:
+    driver: local
+
+networks:
+  kanban-network:
+    driver: bridge
