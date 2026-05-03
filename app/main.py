@@ -183,7 +183,8 @@ def create_app(data_folder: Path) -> FastAPI:
     @app.post("/api/tasks", status_code=201)
     async def create_task(body: dict):
         """Create a new task."""
-        if not validate_content_path(body["content_path"], data_folder):
+        content_path = body.get("content_path")
+        if not content_path or not validate_content_path(content_path, data_folder):
             raise HTTPException(status_code=400, detail="invalid_path")
 
         db = await get_db()

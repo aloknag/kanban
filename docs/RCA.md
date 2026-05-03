@@ -35,3 +35,15 @@ Why: CORS was never needed in dev because the Vite proxy handles API calls serve
 Who: `app/main.py` — `create_app()` has no `CORSMiddleware`, present since the backend was first scaffolded.
 Where: Should have been caught by an E2E test running against a built Docker image, not the Vite dev server.
 Avoid: Treat Docker Compose as the only valid acceptance environment; any API consumed by a browser requires CORS headers regardless of the dev proxy setup.
+
+## Bug ID: #36
+- **Why introduced**: Missing validation for mandatory field 'content_path' in POST /api/tasks.
+- **Who/where**:  in  endpoint.
+- **Where it should have been caught**: Backend unit tests.
+- **What to avoid**: Unconditionally accessing keys in request body payloads.
+
+## Bug ID: #36
+- **Why introduced**: Missing validation for mandatory field 'content_path' in POST /api/tasks.
+- **Who/where**: `app/main.py` in `create_task` endpoint.
+- **Where it should have been caught**: Backend unit tests.
+- **What to avoid**: Unconditionally accessing keys in request body payloads.
