@@ -47,3 +47,9 @@ Avoid: Treat Docker Compose as the only valid acceptance environment; any API co
 - **Who/where**: `app/main.py` in `create_task` endpoint.
 - **Where it should have been caught**: Backend unit tests.
 - **What to avoid**: Unconditionally accessing keys in request body payloads.
+
+## Bug ID: #37
+- **Why introduced**: No validation of column_id against the columns table.
+- **Who/where**: `app/main.py` in `update_task` endpoint.
+- **Where it should have been caught**: Backend integration tests.
+- **What to avoid**: Assuming foreign key relationships are enforced or validated by application logic without explicit checks.

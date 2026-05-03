@@ -269,6 +269,13 @@ def create_app(data_folder: Path) -> FastAPI:
             updates = []
             values = []
 
+            # Validate column_id if it's being updated
+            if "column_id" in body:
+                column_id = body["column_id"]
+                cursor = await db.execute("SELECT id FROM columns WHERE id = ?", (column_id,))
+                if not await cursor.fetchone():
+                    raise HTTPException(status_code=400, detail="Invalid column_id")
+
             for field in ["title", "content_path", "assignee", "column_id", "epic_id"]:
                 if field in body:
                     updates.append(f"{field} = ?")
