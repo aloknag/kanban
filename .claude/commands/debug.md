@@ -2,45 +2,75 @@
 description: Systematic debugging of issues for Kanban
 ---
 
-## Skills to use while debugging
-You can use 
-    - Skill(superpowers:systematic-debugging)
-    - Skill(superpowers:test-driven-development)
+## Iron Rules
+- Follow every step in order. No skipping. No reordering.
+- Prior knowledge of the fix does NOT skip the process.
+- Do not move to the next step until the current one is complete and verified.
 
-## Debugging and Fixing Bugs
-First thing is to reproduce it by yourself.
+## Step 1 — Reproduce in browser
+Use playwright-mcp to open http://localhost:5173 and reproduce the issue yourself.
+- Check browser console for errors (`browser_console_messages`)
+- Take screenshot → save to `evidences/` folder
+- If already reproduced this session, proceed to Step 2.
 
-**Steps to reproduce**:
-  1. Start docker compose to bring up the entire application.
-  2. (playwright-mcp) Open browser and navigate to http://localhost:5173
-  3. Check browser console logs. (Errors)
-  4. Take screenshot and see nothing is displayed.
+**STOP. Do not proceed until you have a screenshot in `evidences/`.**
 
-**Loop**:
+## Step 2 — File GitHub Bug Report
+```
+gh issue create --repo aloknag/testfiles --title "BUG: ..." --body "..." --label bug
+gh project item-add 1 --owner aloknag --url <issue-url>
+```
+Include in body: steps to reproduce, console errors, screenshot filename.
 
-**PAUSE AND INTERNALIZE**: Understand your "Behavioral guidelines"  and "Systems Thinking guidelines"
+**STOP. Do not proceed until you have a GitHub issue URL.**
 
-1. Search relevant code and produce a hypothesis that can be tested, either unit, or e2e.
-2. Write the hypothesis in scratchpad.
-3. Write a test, unit, playwright e2e, .. to reproduce the issue.
-4. Follow "Behavioral guidelines"  and "Systems Thinking" to write a fix.
-5. Re-run test to see it passes. Re-run all tests to see everything passes.
+## Step 3 — Root Cause
+Use `Skill(superpowers:systematic-debugging)` — all four phases.
+- Instrument the code to observe actual values at component boundaries.
+- State the hypothesis explicitly before touching any production code.
 
-## Summarize
+## Step 4 — Fix with TDD
+Use `Skill(superpowers:test-driven-development)`.
+- Write failing test. Run it. Confirm it fails for the right reason.
+- Write minimal fix. Confirm all tests pass.
+- Save before/after screenshots to `evidences/`.
 
-Write 1-2 lines RCA summary as WHY do you think bug got introduced and who and where it should have been caught.
-What mistakes to avoid. Document it in RCA.md. 
+## Step 5 — Update GitHub Issue
+Add a comment with the fix summary and post-fix screenshot.
+```
+gh issue comment <N> --repo aloknag/testfiles --body "Fixed. Before: <screenshot>. After: <screenshot>."
+```
+
+## Step 6 — Commit and Close
+Stage only files changed for this bug.
+```
+git commit -m "fix: <description> (closes #N)"
+gh issue close <N> --repo aloknag/testfiles --comment "Fixed in <commit-sha>."
+```
+
+## Step 7 — Write RCA
+Append to `docs/RCA.md` with the Bug ID:
+- **Why** introduced
+- **Who/where** in the code
+- **Where** it should have been caught
+- **What to avoid**
+
+## Skills
+- `Skill(superpowers:systematic-debugging)` — Step 3
+- `Skill(superpowers:test-driven-development)` — Step 4
 
 ## References
-**E2E Testing:** docs/e2e-testing.md on how to perform e2e testing.
-**Tracking:** `aloknag/testfiles` GitHub issues. Project board #1 `AgentKanban` at `https://github.com/users/aloknag/projects/1`.
-**Playwright Screenshots:** save them to evidences folder, they are to be attached to Bug report and Fix command but not trackked.
+- E2E Testing: `docs/e2e-testing.md`
+- Tracking: `aloknag/testfiles` issues, AgentKanban project board #1
+- Screenshots: `evidences/` (not tracked by git)
 
-## Checklist
-- [ ] Issue was reproduced.
-- [ ] Failing tests written
-- [ ] Hypothesis validated
-- [ ] Demostrated that fix works (passing test)
-- [ ] Regression tests passes
-- [ ] Bug repor created on `AgentKanban` project board.
-- [ ] Added summary to RCA document with Bug ID.
+## Checklist — verify ALL before declaring done
+- [ ] Issue reproduced in browser
+- [ ] Screenshot saved to `evidences/`
+- [ ] GitHub issue filed and added to AgentKanban board
+- [ ] Failing test written and confirmed failing
+- [ ] Fix implemented — all tests pass
+- [ ] GitHub issue updated with fix screenshot
+- [ ] Commit made with `closes #N`
+- [ ] GitHub issue closed with commit SHA
+- [ ] RCA appended to `docs/RCA.md` with Bug ID
