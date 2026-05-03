@@ -26,6 +26,9 @@ gh issue comment <N> --repo aloknag/testfiles --body "Investigating: picked up o
 **STOP. Do not proceed until the comment is posted.**
 
 ## Step 3 — Rebuild and Reproduce in Browser
+
+***IMPORTANT**: Check if QA has added a helpful script to reproduce the issue, if yes, directly use it. Check body and comments of GH Issue.
+
 Always rebuild before reproducing:
 ```
 docker compose down && docker compose up --build -d
