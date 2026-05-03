@@ -505,12 +505,18 @@ def create_app(data_folder: Path) -> FastAPI:
     @app.post("/api/tasks/{task_id}/comments", status_code=201)
     async def create_task_comment(task_id: int, body: dict):
         """Create a comment on a task."""
+        comment_body = body.get("body", "")
+        author = body.get("author", "")
+
+        if not author or not comment_body or not comment_body.strip():
+            raise HTTPException(status_code=400, detail="Invalid comment body or author")
+
         db = await get_db()
         try:
             now = datetime.now(timezone.utc).isoformat()
             cursor = await db.execute(
                 "INSERT INTO comments (entity_type, entity_id, author, body, created_at) VALUES (?, ?, ?, ?, ?)",
-                ("task", task_id, body["author"], body["body"], now)
+                ("task", task_id, author, comment_body, now)
             )
             await db.commit()
 
@@ -544,12 +550,18 @@ def create_app(data_folder: Path) -> FastAPI:
     @app.post("/api/epics/{epic_id}/comments", status_code=201)
     async def create_epic_comment(epic_id: int, body: dict):
         """Create a comment on an epic."""
+        comment_body = body.get("body", "")
+        author = body.get("author", "")
+
+        if not author or not comment_body or not comment_body.strip():
+            raise HTTPException(status_code=400, detail="Invalid comment body or author")
+
         db = await get_db()
         try:
             now = datetime.now(timezone.utc).isoformat()
             cursor = await db.execute(
                 "INSERT INTO comments (entity_type, entity_id, author, body, created_at) VALUES (?, ?, ?, ?, ?)",
-                ("epic", epic_id, body["author"], body["body"], now)
+                ("epic", epic_id, author, comment_body, now)
             )
             await db.commit()
 

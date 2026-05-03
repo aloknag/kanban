@@ -59,3 +59,9 @@ Avoid: Treat Docker Compose as the only valid acceptance environment; any API co
 - **Who/where**: `app/database.py` in `init_database` function.
 - **Where it should have been caught**: Integration testing with persistent storage.
 - **What to avoid**: Using simple counters or checks that do not account for existing data when performing database bootstrapping.
+
+## Bug ID: #39
+- **Why introduced**: Lack of input validation on the comment API endpoints allowed empty or invalid comments to be persisted and missing fields to trigger an unhandled Exception (500).
+- **Who/where**: `app/main.py` in `create_task_comment` and `create_epic_comment` endpoints.
+- **Where it should have been caught**: Backend unit testing for API endpoints.
+- **What to avoid**: Assuming client-provided payloads contain all expected fields and have valid content; always perform server-side validation.
