@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 import aiosqlite
 from contextlib import asynccontextmanager
@@ -19,6 +20,13 @@ def create_app(data_folder: Path) -> FastAPI:
         yield
 
     app = FastAPI(lifespan=lifespan)
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     async def get_db() -> aiosqlite.Connection:
         """Get database connection."""

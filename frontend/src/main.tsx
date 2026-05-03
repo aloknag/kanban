@@ -4,17 +4,13 @@ import mermaid from 'mermaid'
 import { App } from './App'
 import './styles/index.css'
 
-// Initialize mermaid with custom theme using design tokens
+// CSS custom properties cannot be resolved at mermaid init time (before the DOM exists).
+// Passing var(--x) as themeVariables causes mermaid to throw "Unsupported color format"
+// and crash before ReactDOM.createRoot() runs, leaving a blank page.
 mermaid.initialize({
   startOnLoad: false,
   theme: 'base',
   themeVariables: {
-    background: 'var(--c-paper)',
-    primaryColor: 'var(--c-card)',
-    primaryTextColor: 'var(--c-ink)',
-    primaryBorderColor: 'var(--c-ink)',
-    lineColor: 'var(--c-ink-2)',
-    fontFamily: 'var(--f-mono)',
     fontSize: '12px',
   },
   flowchart: { curve: 'linear', htmlLabels: false },
