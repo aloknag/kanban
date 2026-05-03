@@ -53,3 +53,9 @@ Avoid: Treat Docker Compose as the only valid acceptance environment; any API co
 - **Who/where**: `app/main.py` in `update_task` endpoint.
 - **Where it should have been caught**: Backend integration tests.
 - **What to avoid**: Assuming foreign key relationships are enforced or validated by application logic without explicit checks.
+
+## Bug ID: #38
+- **Why introduced**: Race condition/lack of idempotency in database initialization code allowed duplicate columns to be created upon startup.
+- **Who/where**: `app/database.py` in `init_database` function.
+- **Where it should have been caught**: Integration testing with persistent storage.
+- **What to avoid**: Using simple counters or checks that do not account for existing data when performing database bootstrapping.

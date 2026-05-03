@@ -15,7 +15,7 @@ async def init_database(data_folder: Path) -> None:
         await db.execute("""
             CREATE TABLE IF NOT EXISTS columns (
                 id          INTEGER PRIMARY KEY,
-                name        TEXT NOT NULL,
+                name        TEXT NOT NULL UNIQUE,
                 position    INTEGER NOT NULL,
                 created_at  TEXT NOT NULL
             )
@@ -65,19 +65,22 @@ async def init_database(data_folder: Path) -> None:
         await db.execute("CREATE INDEX IF NOT EXISTS idx_comments_lookup ON comments(entity_type, entity_id)")
 
         # Bootstrap columns (only if they don't exist)
-        cursor = await db.execute("SELECT COUNT(*) FROM columns")
-        count = await cursor.fetchone()
-
-        if count[0] == 0:
-            now = datetime.now(timezone.utc).isoformat()
+        cursor = await db.execute("SELECT name FROM columns")
+        existing_columns = [row[0] for row in await cursor.fetchall()]
+        
+        now = datetime.now(timezone.utc).isoformat()
+        
+        if "Todo" not in existing_columns:
             await db.execute(
                 "INSERT INTO columns (name, position, created_at) VALUES (?, ?, ?)",
                 ("Todo", 0, now)
             )
+        if "In Progress" not in existing_columns:
             await db.execute(
                 "INSERT INTO columns (name, position, created_at) VALUES (?, ?, ?)",
                 ("In Progress", 1, now)
             )
+        if "Done" not in existing_columns:
             await db.execute(
                 "INSERT INTO columns (name, position, created_at) VALUES (?, ?, ?)",
                 ("Done", 2, now)
