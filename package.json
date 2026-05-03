@@ -1,0 +1,20 @@
+{
+  "name": "kanban",
+  "version": "1.0.0",
+  "description": "A local-only Kanban board where AI agents author work as Markdown files on disk and manage them via a REST API. The server is launched with `--folder <path>`, treats that folder as the data root (SQLite metadata + Markdown files), reads files on demand, and renders them in a futuristic dark-glassmorphism UI.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.59.1"
+  }
+}
