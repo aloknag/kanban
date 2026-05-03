@@ -372,6 +372,9 @@ def create_app(data_folder: Path) -> FastAPI:
             epic_number = count[0] + 1
             slug = f"EPIC-{epic_number:03d}"
 
+            # Get column_id (default to 1 if not provided, since column_id is NOT NULL)
+            column_id = body.get("column_id", 1)
+
             now = datetime.now(timezone.utc).isoformat()
             cursor = await db.execute(
                 "INSERT INTO epics (slug, title, content_path, assignee, column_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -380,7 +383,7 @@ def create_app(data_folder: Path) -> FastAPI:
                     body["title"],
                     body["content_path"],
                     body.get("assignee"),
-                    body["column_id"],
+                    column_id,
                     now,
                     now,
                 )
@@ -394,7 +397,7 @@ def create_app(data_folder: Path) -> FastAPI:
                 "title": body["title"],
                 "content_path": body["content_path"],
                 "assignee": body.get("assignee"),
-                "column_id": body["column_id"],
+                "column_id": column_id,
                 "task_count": 0,
                 "done_count": 0,
             }

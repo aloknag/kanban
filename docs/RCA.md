@@ -65,3 +65,9 @@ Avoid: Treat Docker Compose as the only valid acceptance environment; any API co
 - **Who/where**: `app/main.py` in `create_task_comment` and `create_epic_comment` endpoints.
 - **Where it should have been caught**: Backend unit testing for API endpoints.
 - **What to avoid**: Assuming client-provided payloads contain all expected fields and have valid content; always perform server-side validation.
+
+## Bug ID: #40
+- **Why introduced**: Unconditional access to the 'column_id' key in the request payload for , which is not mandatory for epics.
+- **Who/where**: `app/main.py` in `create_epic` endpoint.
+- **Where it should have been caught**: Backend integration/unit testing for API endpoints.
+- **What to avoid**: Assuming all keys in a request body are present, especially if they are optional in the data model.
