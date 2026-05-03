@@ -11,15 +11,15 @@ const { test, expect } = require('@playwright/test');
 const API = 'http://localhost:8000';
 const UI = 'http://localhost:5173';
 
+const TASK_ID = 3; // TASK-003
+
 test('PATCH task with non-existent column_id should return 4xx, not 200', async ({ request }) => {
-  // Get a valid task id from the first task in the list
-  const tasks = await request.get(`${API}/api/tasks`);
-  const taskList = await tasks.json();
-  const task = taskList[0];
-  const originalColumnId = task.column_id;
+  // Record original column before patching
+  const before = await request.get(`${API}/api/tasks/${TASK_ID}`);
+  const originalColumnId = (await before.json()).column_id;
 
   // Attempt to move to a non-existent column
-  const response = await request.patch(`${API}/api/tasks/${task.id}`, {
+  const response = await request.patch(`${API}/api/tasks/${TASK_ID}`, {
     data: { column_id: 9999 },
   });
 
@@ -28,18 +28,17 @@ test('PATCH task with non-existent column_id should return 4xx, not 200', async 
   expect(response.status()).toBeLessThan(500);
 
   // Verify task still has original column_id
-  const check = await request.get(`${API}/api/tasks/${task.id}`);
-  const updated = await check.json();
-  expect(updated.column_id).toBe(originalColumnId);
+  const after = await request.get(`${API}/api/tasks/${TASK_ID}`);
+  expect((await after.json()).column_id).toBe(originalColumnId);
 });
 
 test('Task assigned to non-existent column is visible somewhere on the board', async ({ page }) => {
-  // Move task 3 to non-existent column via API
-  const response = await page.request.patch(`${API}/api/tasks/3`, {
+  // Move TASK-003 to a non-existent column via API
+  await page.request.patch(`${API}/api/tasks/${TASK_ID}`, {
     data: { column_id: 9999 },
   });
-  // Even if API accepted it (the bug), verify the task still appears on the board
+
+  // Verify by slug-based id — #task-3-title is unique on the board
   await page.goto(`${UI}/board`);
-  const taskOnBoard = page.locator('text=E2E test task');
-  await expect(taskOnBoard).toBeVisible();
+  await expect(page.locator('#task-3-title')).toBeVisible();
 });

@@ -16,9 +16,10 @@ test('should handle creating a task with a very long name', async ({ page }) => 
 
   // Task creation itself should succeed
   expect(response.status()).toBe(201);
+  const { id } = await response.json();
 
-  // Open the board and verify the card renders without breaking the layout
+  // Open the board and verify the card renders without breaking layout
+  // Use #task-{id}-title — unique per task, avoids strict mode violations
   await page.goto('http://localhost:5173/board');
-  const card = page.locator('h3', { hasText: longString.slice(0, 50) });
-  await expect(card).toBeVisible();
+  await expect(page.locator(`#task-${id}-title`)).toBeVisible();
 });
