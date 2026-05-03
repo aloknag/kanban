@@ -164,3 +164,17 @@ Write a 2-line summary to the user:
 - [ ] If bug found: issue added to AgentKanban project board
 - [ ] If bug found: repro test + evidence committed with `bug:#N` prefix
 - [ ] 2-line summary written to user
+
+## Helpful Commands
+
+### Create test content in container
+```bash
+docker compose exec backend sh -c "mkdir -p /data/tasks && echo '# Test content' > /data/tasks/valid-curl.md"
+```
+
+### Verify task creation via API
+```bash
+curl -i -X POST http://localhost:8000/api/tasks \
+     -H "Content-Type: application/json" \
+     -d '{"title": "Valid Path Task", "column_id": 1, "content_path": "tasks/valid-curl.md"}'
+```
