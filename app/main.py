@@ -276,6 +276,10 @@ def create_app(data_folder: Path) -> FastAPI:
                 if not await cursor.fetchone():
                     raise HTTPException(status_code=400, detail="Invalid column_id")
 
+            # Validate title if it's being updated
+            if "title" in body and not body["title"].strip():
+                raise HTTPException(status_code=400, detail="Title cannot be empty")
+
             for field in ["title", "content_path", "assignee", "column_id", "epic_id"]:
                 if field in body:
                     updates.append(f"{field} = ?")

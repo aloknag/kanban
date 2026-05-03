@@ -77,3 +77,9 @@ Avoid: Treat Docker Compose as the only valid acceptance environment; any API co
 - **Who/where**: `app/main.py` in `get_task` and `get_epic` endpoints.
 - **Where it should have been caught**: Backend API contract testing.
 - **What to avoid**: Using 200 OK for error responses; always use the correct semantic HTTP status code for errors (e.g., 404 for missing items).
+
+## Bug ID: #42
+- **Why introduced**: PATCH /api/tasks/{id} lacked validation to prevent setting an empty string or whitespace-only title for tasks.
+- **Who/where**: `app/main.py` in `update_task` endpoint.
+- **Where it should have been caught**: Backend API contract testing.
+- **What to avoid**: Assuming incoming strings are not empty when the model expects a non-empty string.
