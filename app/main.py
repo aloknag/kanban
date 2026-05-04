@@ -31,6 +31,7 @@ def create_app(data_folder: Path) -> FastAPI:
     async def get_db() -> aiosqlite.Connection:
         """Get database connection."""
         db = await aiosqlite.connect(str(data_folder / "kanban.db"))
+        await db.execute("PRAGMA foreign_keys=ON")
         return db
 
     @app.get("/api/columns", response_model=List[ColumnResponse])
