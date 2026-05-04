@@ -85,6 +85,23 @@ export function EpicDetail() {
                   <Markdown source={epic.content} />
                 </div>
               )}
+
+              {/* Linked Tasks */}
+              {epic.tasks && epic.tasks.length > 0 && (
+                <div className="mt-gutter mb-gutter">
+                  <h2 className="text-h2 font-display text-ink mb-gutter">TASKS</h2>
+                  <div className="space-y-card">
+                    {epic.tasks.map(task => (
+                      <div key={task.id} className="p-card bg-card border border-hair border-ink3">
+                        <a href={`/tasks/${task.id}`} className="text-body font-mono text-ink hover:underline">
+                          {task.slug} - {task.title}
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Journal section below Markdown content */}
               <Journal entityType="epic" entityId={epic.id} />
             </>

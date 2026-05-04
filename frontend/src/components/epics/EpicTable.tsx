@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ProgressSparkbar } from './ProgressSparkbar';
 import { Epic } from '../../lib/api';
 
@@ -11,7 +10,6 @@ type Props = {
 };
 
 export function EpicTable({ epics }: Props) {
-  const navigate = useNavigate();
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
@@ -123,11 +121,18 @@ export function EpicTable({ epics }: Props) {
             <tr
               key={epic.id}
               data-epic-id={epic.id}
-              onClick={() => navigate(`/epics/${epic.id}`)}
               className="cursor-pointer border-b-hair border-ink3 hover:bg-paper2 transition-colors duration-fast"
             >
-              <td className="p-card text-body-sm font-mono text-ink">{epic.slug}</td>
-              <td className="p-card text-body-sm text-ink">{epic.title}</td>
+              <td className="p-card text-body-sm font-mono text-ink">
+                <a href={`/epics/${epic.id}`} className="hover:underline">
+                  {epic.slug}
+                </a>
+              </td>
+              <td className="p-card text-body-sm text-ink">
+                <a href={`/epics/${epic.id}`} className="hover:underline">
+                  {epic.title}
+                </a>
+              </td>
               <td className="p-card text-body-sm text-ink3">
                 {epic.assignee || '—'}
               </td>

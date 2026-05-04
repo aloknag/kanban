@@ -88,6 +88,7 @@ export interface Epic {
 export interface EpicDetail extends Epic {
   content: string;
   content_error?: string;
+  tasks?: Task[];
 }
 
 export interface Comment {
