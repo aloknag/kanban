@@ -188,6 +188,13 @@ def create_app(data_folder: Path) -> FastAPI:
     async def create_task(body: dict):
         """Create a new task."""
         content_path = body.get("content_path")
+        title = body.get("title")
+        column_id = body.get("column_id")
+        
+        if not title or not isinstance(title, str) or not title.strip():
+            raise HTTPException(status_code=400, detail="Invalid title")
+        if column_id is None:
+            raise HTTPException(status_code=400, detail="column_id is required")
         if not content_path or not validate_content_path(content_path, data_folder):
             raise HTTPException(status_code=400, detail="invalid_path")
 
@@ -204,10 +211,10 @@ def create_app(data_folder: Path) -> FastAPI:
                 "INSERT INTO tasks (slug, title, content_path, assignee, column_id, epic_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     slug,
-                    body["title"],
-                    body["content_path"],
+                    title,
+                    content_path,
                     body.get("assignee"),
-                    body["column_id"],
+                    column_id,
                     body.get("epic_id"),
                     now,
                     now,
@@ -219,10 +226,10 @@ def create_app(data_folder: Path) -> FastAPI:
             return {
                 "id": task_id,
                 "slug": slug,
-                "title": body["title"],
-                "content_path": body["content_path"],
+                "title": title,
+                "content_path": content_path,
                 "assignee": body.get("assignee"),
-                "column_id": body["column_id"],
+                "column_id": column_id,
                 "epic_id": body.get("epic_id"),
             }
         finally:
@@ -303,6 +310,9 @@ def create_app(data_folder: Path) -> FastAPI:
                 (task_id,)
             )
             row = await cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Not found")
+
             return {
                 "id": row[0],
                 "slug": row[1],
@@ -498,6 +508,9 @@ def create_app(data_folder: Path) -> FastAPI:
                 (epic_id,)
             )
             row = await cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Not found")
+
             return {
                 "id": row[0],
                 "slug": row[1],
