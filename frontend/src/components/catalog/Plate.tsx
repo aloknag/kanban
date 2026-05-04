@@ -12,13 +12,15 @@ import { Gutter } from './Gutter'
 
 type Props = {
   children: ReactNode
+  filterText?: string
+  onFilterChange?: (text: string) => void
 }
 
-export function Plate({ children }: Props) {
+export function Plate({ children, filterText, onFilterChange }: Props) {
   return (
     <div className="flex min-h-screen bg-paper">
       {/* Left: Catalog gutter */}
-      <Gutter />
+      <Gutter filterText={filterText} onFilterChange={onFilterChange} />
 
       {/* Right: Main content area */}
       <main className="flex-1 max-w-plate mx-auto px-page py-page">

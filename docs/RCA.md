@@ -89,3 +89,9 @@ Avoid: Treat Docker Compose as the only valid acceptance environment; any API co
 - **Who/where**: `app/main.py` in `get_epic` endpoint, frontend routing issues.
 - **Where it should have been caught**: Frontend integration testing for the epic detail page.
 - **What to avoid**: Leaving API endpoints incomplete; always ensure that detail views are populated with all necessary related entities.
+
+## Bug ID: #44
+- **Why introduced**: The CATALOG sidebar was a stub component with no search/filter functionality implemented.
+- **Who/where**: `frontend/src/components/catalog/Gutter.tsx` and `frontend/src/routes/Board.tsx`.
+- **Where it should have been caught**: Frontend UI/functional testing.
+- **What to avoid**: Leaving UI stubs without implementation and documentation of intended behavior.

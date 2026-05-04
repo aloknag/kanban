@@ -60,6 +60,10 @@ def create_app(data_folder: Path) -> FastAPI:
     @app.post("/api/columns", status_code=201, response_model=ColumnResponse)
     async def create_column(body: dict):
         """Create a new column."""
+        name = body.get("name", "").strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="Name cannot be empty")
+
         db = await get_db()
         try:
             # Get next position
@@ -70,12 +74,12 @@ def create_app(data_folder: Path) -> FastAPI:
             now = datetime.now(timezone.utc).isoformat()
             cursor = await db.execute(
                 "INSERT INTO columns (name, position, created_at) VALUES (?, ?, ?)",
-                (body["name"], next_position, now)
+                (name, next_position, now)
             )
             await db.commit()
 
             column_id = cast(int, cursor.lastrowid)
-            return ColumnResponse(id=column_id, name=body["name"], position=next_position, task_count=0)
+            return ColumnResponse(id=column_id, name=name, position=next_position, task_count=0)
         finally:
             await db.close()
 

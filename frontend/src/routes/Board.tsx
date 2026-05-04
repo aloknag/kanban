@@ -83,6 +83,9 @@ export function Board() {
   // DnD task drag state (task #29)
   const [activeTaskDrag, setActiveTaskDrag] = useState<Task | null>(null)
 
+  // Filter state
+  const [filterText, setFilterText] = useState('')
+
   // Set up DnD sensors for pointer and keyboard
   // distance: 8 lets short taps pass through to child Links; drag only activates after 8px movement
   const sensors = useSensors(
@@ -151,6 +154,14 @@ export function Board() {
     queryKey: ['tasks'],
     queryFn: () => getTasks(),
   })
+
+  // Filter tasks based on text
+  const filteredTasks = useMemo(() => {
+    return tasks.filter(task =>
+      task.title.toLowerCase().includes(filterText.toLowerCase()) ||
+      task.slug.toLowerCase().includes(filterText.toLowerCase())
+    )
+  }, [tasks, filterText])
 
   // Focus first card on mount
   useEffect(() => {
@@ -382,7 +393,7 @@ export function Board() {
     <div className="flex flex-col min-h-screen bg-paper" data-testid="board-page">
       <TopRule />
       <KeyboardSheet open={keyboardSheetOpen} onClose={() => setKeyboardSheetOpen(false)} />
-      <Plate>
+      <Plate filterText={filterText} onFilterChange={setFilterText}>
         <div className="w-full">
           {/* Error state */}
           {error && (
@@ -431,7 +442,7 @@ export function Board() {
               >
                 <div data-testid="board-content">
                   {sortedColumns.map(column => {
-                    const columnTasks = tasks.filter(t => t.column_id === column.id)
+                    const columnTasks = filteredTasks.filter(t => t.column_id === column.id)
                     const isCollapsible = column.name === 'Done'
                     const isCollapsed = collapsedColumns.has(column.id)
                     return (
