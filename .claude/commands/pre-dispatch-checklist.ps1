@@ -71,7 +71,7 @@ Pop-Location
 Write-Host ""
 Write-Host "4. GITHUB PROJECT STATUS" -ForegroundColor Yellow
 try {
-    $projectItems = gh project item-list 1 --owner aloknag --format json | ConvertFrom-Json
+    $projectItems = gh project item-list 1 --owner aloknag --format json --limit 200 | ConvertFrom-Json
     $issueItem = $projectItems.items | Where-Object { $_.content.number -eq $TaskNumber }
 
     if ($issueItem) {
