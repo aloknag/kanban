@@ -4,15 +4,15 @@
 - [x] CR-01: Fix create_column unchecked name
 - [x] CR-02: Fix create_task unchecked title/column_id
 - [x] CR-03: Fix update_task 500 on missing task
-- [ ] CR-04: Fix create_epic unchecked title/content_path
+- [x] CR-04: Fix create_epic unchecked title/content_path
 - [x] CR-05: Fix update_epic 500 on missing epic
 - [x] CR-06: Fix database FK enforcement (database.py)
 - [ ] CR-08: Fix update_column empty name
 - [ ] CR-09: Fix create_task empty title
-- [ ] CR-10: Fix slug race condition (Atomic transactions/Retry)
+- [x] CR-10: Fix slug race condition (Atomic transactions/Retry)
 - [ ] CR-11: Fix update_task title type check
 - [ ] CR-12: Fix update_task content_path validation
-- [ ] CR-13: Remove hardcoded column ID 3
+- [x] CR-13: Remove hardcoded column ID 3
 - [ ] CR-14: Fix update_epic column_id validation
 - [ ] CR-15: Fix update_epic empty title
 - [ ] CR-16: Fix update_epic content_path validation

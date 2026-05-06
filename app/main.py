@@ -201,26 +201,22 @@ def create_app(data_folder: Path) -> FastAPI:
 
         db = await get_db()
         try:
-            # Get next slug
-            cursor = await db.execute("SELECT COUNT(*) FROM tasks")
-            count = await cursor.fetchone()
-            task_number = count[0] + 1
-            slug = f"TASK-{task_number:03d}"
-
             now = datetime.now(timezone.utc).isoformat()
-            cursor = await db.execute(
-                "INSERT INTO tasks (slug, title, content_path, assignee, column_id, epic_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    slug,
-                    title,
-                    content_path,
-                    body.get("assignee"),
-                    column_id,
-                    body.get("epic_id"),
-                    now,
-                    now,
-                )
-            )
+            # Retry loop guards against slug UNIQUE constraint collision under concurrency (CR-10)
+            for attempt in range(10):
+                cursor = await db.execute("SELECT COUNT(*) FROM tasks")
+                count = (await cursor.fetchone())[0]
+                slug = f"TASK-{count + 1 + attempt:03d}"
+                try:
+                    cursor = await db.execute(
+                        "INSERT INTO tasks (slug, title, content_path, assignee, column_id, epic_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                        (slug, title, content_path, body.get("assignee"), column_id, body.get("epic_id"), now, now),
+                    )
+                    break
+                except Exception as e:
+                    if "UNIQUE" in str(e) and attempt < 9:
+                        continue
+                    raise HTTPException(status_code=500, detail="slug_collision")
             await db.commit()
 
             task_id = cursor.lastrowid
@@ -341,6 +337,9 @@ def create_app(data_folder: Path) -> FastAPI:
         """List all epics with excerpt field."""
         db = await get_db()
         try:
+            done_row = await (await db.execute("SELECT id FROM columns WHERE name = 'Done'")).fetchone()
+            done_column_id = done_row[0] if done_row else None
+
             cursor = await db.execute(
                 "SELECT id, slug, title, content_path, assignee, column_id FROM epics ORDER BY created_at DESC"
             )
@@ -349,19 +348,20 @@ def create_app(data_folder: Path) -> FastAPI:
             for row in rows:
                 epic_id = row[0]
                 excerpt = get_excerpt_cached(row[3], data_folder)
-                # Get task count
                 task_cursor = await db.execute(
                     "SELECT COUNT(*) FROM tasks WHERE epic_id = ?",
                     (epic_id,)
                 )
                 task_count = (await task_cursor.fetchone())[0]
 
-                # Get done count (tasks in column 3 = Done)
-                done_cursor = await db.execute(
-                    "SELECT COUNT(*) FROM tasks WHERE epic_id = ? AND column_id = 3",
-                    (epic_id,)
-                )
-                done_count = (await done_cursor.fetchone())[0]
+                if done_column_id is not None:
+                    done_cursor = await db.execute(
+                        "SELECT COUNT(*) FROM tasks WHERE epic_id = ? AND column_id = ?",
+                        (epic_id, done_column_id)
+                    )
+                    done_count = (await done_cursor.fetchone())[0]
+                else:
+                    done_count = 0
 
                 result.append({
                     "id": epic_id,
@@ -380,41 +380,42 @@ def create_app(data_folder: Path) -> FastAPI:
     @app.post("/api/epics", status_code=201)
     async def create_epic(body: dict):
         """Create a new epic."""
-        if not validate_content_path(body["content_path"], data_folder):
+        title = body.get("title")
+        content_path = body.get("content_path")
+
+        if not title or not isinstance(title, str) or not title.strip():
+            raise HTTPException(status_code=400, detail="title is required")
+        if not content_path or not validate_content_path(content_path, data_folder):
             raise HTTPException(status_code=400, detail="invalid_path")
+
+        column_id = body.get("column_id", 1)
 
         db = await get_db()
         try:
-            # Get next slug
-            cursor = await db.execute("SELECT COUNT(*) FROM epics")
-            count = await cursor.fetchone()
-            epic_number = count[0] + 1
-            slug = f"EPIC-{epic_number:03d}"
-
-            # Get column_id (default to 1 if not provided, since column_id is NOT NULL)
-            column_id = body.get("column_id", 1)
-
             now = datetime.now(timezone.utc).isoformat()
-            cursor = await db.execute(
-                "INSERT INTO epics (slug, title, content_path, assignee, column_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (
-                    slug,
-                    body["title"],
-                    body["content_path"],
-                    body.get("assignee"),
-                    column_id,
-                    now,
-                    now,
-                )
-            )
+            # Retry loop guards against slug UNIQUE constraint collision under concurrency (CR-10)
+            for attempt in range(10):
+                cursor = await db.execute("SELECT COUNT(*) FROM epics")
+                count = (await cursor.fetchone())[0]
+                slug = f"EPIC-{count + 1 + attempt:03d}"
+                try:
+                    cursor = await db.execute(
+                        "INSERT INTO epics (slug, title, content_path, assignee, column_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        (slug, title, content_path, body.get("assignee"), column_id, now, now),
+                    )
+                    break
+                except Exception as e:
+                    if "UNIQUE" in str(e) and attempt < 9:
+                        continue
+                    raise HTTPException(status_code=500, detail="slug_collision")
             await db.commit()
 
             epic_id = cursor.lastrowid
             return {
                 "id": epic_id,
                 "slug": slug,
-                "title": body["title"],
-                "content_path": body["content_path"],
+                "title": title,
+                "content_path": content_path,
                 "assignee": body.get("assignee"),
                 "column_id": column_id,
                 "task_count": 0,
@@ -455,9 +456,11 @@ def create_app(data_folder: Path) -> FastAPI:
                     "column_id": t_row[5],
                 })
 
-            # Get progress
+            done_row = await (await db.execute("SELECT id FROM columns WHERE name = 'Done'")).fetchone()
+            done_column_id = done_row[0] if done_row else None
+
             task_count = len(tasks)
-            done_count = len([t for t in tasks if t["column_id"] == 3])
+            done_count = len([t for t in tasks if done_column_id is not None and t["column_id"] == done_column_id])
 
             result = {
                 "id": row[0],
