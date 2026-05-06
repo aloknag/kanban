@@ -28,4 +28,4 @@ HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=3 \
   CMD .venv/bin/python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/columns')" || exit 1
 
 # Run FastAPI server with activated venv
-CMD sh -c '. .venv/bin/activate && python run_server.py'
+CMD [".venv/bin/python", "run_server.py"]
