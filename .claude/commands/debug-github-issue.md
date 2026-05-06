@@ -25,17 +25,18 @@ gh issue comment <N> --repo aloknag/testfiles --body "Investigating: picked up o
 
 **STOP. Do not proceed until the comment is posted.**
 
-## Step 3 — Rebuild and Reproduce in Browser
-
-***IMPORTANT**: Check if QA has added a helpful script to reproduce the issue, if yes, directly use it. Check body and comments of GH Issue.
+## Step 3 — Rebuild and Reproduce
 
 Always rebuild before reproducing:
 ```
 docker compose down && docker compose up --build -d
 ```
-Use playwright-mcp to open `http://localhost:5173` and follow the steps from the issue.
-- Check browser console for errors (`browser_console_messages`)
-- Take a **before** screenshot → save to `evidences/before-<N>.png`
+How to reproduce:
+   - Check the GH Issue and see if QA has added a helpful script to reproduce the issue. If yes, use it directly to test.
+   - If QA has not added any script to reproduce the issue than do following:
+      - Use playwright-mcp to open `http://localhost:5173` and follow the steps from the issue.
+      - Check browser console for errors (`browser_console_messages`)
+      - Take a **before** screenshot → save to `evidences/before-<N>.png`
 
 **If you cannot reproduce:**
 1. Rebuild clean and retry once.
@@ -45,7 +46,7 @@ Use playwright-mcp to open `http://localhost:5173` and follow the steps from the
    ```
 3. **STOP.**
 
-**STOP. Do not proceed until you have a before screenshot in `evidences/`.**
+**STOP. Do not proceed until you have a reproduced the issue**
 
 ## Step 4 — Post Reproduction Hypothesis
 ```
@@ -102,7 +103,7 @@ gh issue close <N> --repo aloknag/testfiles --comment "Fixed in $(git rev-parse 
 - [ ] Issue identified and full body read
 - [ ] "Investigating" comment posted on GitHub issue
 - [ ] Docker rebuilt and bug reproduced in browser
-- [ ] Before screenshot saved to `evidences/`
+- [ ] Issue is reproduced either by QA provided script or playwright-mcp
 - [ ] Reproduction hypothesis posted on GitHub issue
 - [ ] Root cause confirmed (systematic-debugging all four phases)
 - [ ] Failing test written and confirmed failing
