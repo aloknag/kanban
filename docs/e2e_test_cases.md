@@ -1,6 +1,8 @@
 ## Document containing e2e test cases
 
 > **Design philosophy:** AgentBoard is a "field journal" — columns read top-to-bottom as a single vertical document. Visual bugs that break vertical rhythm, baseline alignment, or document-like reading flow are high severity.
+>
+> **QA visual review standard:** When reviewing screenshots, ask: *How would a real user feel seeing this?* Would they be confused? Do lines, colors, spacing, and groupings communicate clearly? Flag anything that looks off — misaligned rules, unexpected colors, broken rhythm, ambiguous affordances — even if it's not a functional failure.
 
 | Test Case |Test Dimension | Status | Date Executed | GitHub Tracker if test failed |
 |-----------|---------------|--------|---------------|-------------------------------|
