@@ -95,3 +95,13 @@ Avoid: Treat Docker Compose as the only valid acceptance environment; any API co
 - **Who/where**: `frontend/src/components/catalog/Gutter.tsx` and `frontend/src/routes/Board.tsx`.
 - **Where it should have been caught**: Frontend UI/functional testing.
 - **What to avoid**: Leaving UI stubs without implementation and documentation of intended behavior.
+
+---
+
+### Bug #48 — Board layout collapses (columns stack vertically instead of flex row)
+
+**Bug ID:** #48
+**Why introduced:** The `<div data-testid="board-content">` in `Board.tsx` was rendered without a `className`. No flex rule targeted it in the normal stylesheet (only a print `page-break-after` rule). The component was never tested for CSS layout properties in unit tests, only for presence in the DOM.
+**Who/where:** `frontend/src/routes/Board.tsx:443` (bare div); `frontend/src/components/board/SortableColumn.tsx:75` (missing `flex-1 min-w-0` on the flex child).
+**Where it should have been caught:** An E2E layout smoke test on the board route, or a visual regression test asserting `display: flex` on the board container. The unit tests only checked `toBeInTheDocument()`, not layout properties.
+**What to avoid:** When a container's visual correctness depends entirely on a CSS class, assert that class (or the resulting computed style) in tests. A `data-testid` element that renders with no `className` should be a red flag in code review.
