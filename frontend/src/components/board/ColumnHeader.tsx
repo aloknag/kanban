@@ -86,13 +86,11 @@ export function ColumnHeader({
       {isCollapsible && onToggleCollapse && (
         <button
           onClick={onToggleCollapse}
-          className={`text-label font-mono text-ink3 hover:text-ink transition-colors duration-fast ${
-            isCollapsed ? 'opacity-50' : ''
-          }`}
+          className="text-label font-mono text-ink3 hover:text-ink transition-colors duration-fast"
           aria-label={isCollapsed ? `Expand ${column.name} column` : `Collapse ${column.name} column`}
           aria-expanded={!isCollapsed}
         >
-          ▾
+          {isCollapsed ? '[ ▸ expand ]' : '[ ▾ collapse ]'}
         </button>
       )}
     </header>

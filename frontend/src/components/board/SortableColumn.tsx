@@ -72,7 +72,7 @@ export function SortableColumn({
       ref={combinedRef}
       style={style}
       data-column-id={column.id}
-      className="flex-1 min-w-0 mb-gutter"
+      className="mb-gutter"
       data-collapsed={isCollapsed || undefined}
       data-testid={testid}
     >

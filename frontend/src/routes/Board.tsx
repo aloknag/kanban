@@ -447,10 +447,10 @@ export function Board() {
                 items={sortedColumns.map(c => c.id)}
                 strategy={verticalListSortingStrategy}
               >
-                <div className="flex gap-gutter" data-testid="board-content">
+                <div data-testid="board-content">
                   {sortedColumns.map(column => {
                     const columnTasks = filteredTasks.filter(t => t.column_id === column.id)
-                    const isCollapsible = column.name === 'Done'
+                    const isCollapsible = true
                     const isCollapsed = collapsedColumns.has(column.id)
                     return (
                       <SortableColumn
