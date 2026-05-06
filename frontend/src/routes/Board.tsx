@@ -353,6 +353,13 @@ export function Board() {
     'g b': () => navigate('/'),
     'g e': () => navigate('/epics'),
     enter: () => {
+      // Prefer DOM-focused task card to handle Tab navigation (focusedCardId only tracks j/k)
+      const focused = document.activeElement
+      const article = focused?.querySelector('article[data-task-id]') as HTMLElement | null
+      if (article?.dataset.taskId) {
+        navigate(`/tasks/${article.dataset.taskId}`)
+        return
+      }
       if (focusedCardId) navigate(`/tasks/${focusedCardId}`)
     },
     escape: () => setKeyboardSheetOpen(false),

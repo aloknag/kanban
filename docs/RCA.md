@@ -105,3 +105,13 @@ Avoid: Treat Docker Compose as the only valid acceptance environment; any API co
 **Who/where:** `frontend/src/routes/Board.tsx:443` (bare div); `frontend/src/components/board/SortableColumn.tsx:75` (missing `flex-1 min-w-0` on the flex child).
 **Where it should have been caught:** An E2E layout smoke test on the board route, or a visual regression test asserting `display: flex` on the board container. The unit tests only checked `toBeInTheDocument()`, not layout properties.
 **What to avoid:** When a container's visual correctness depends entirely on a CSS class, assert that class (or the resulting computed style) in tests. A `data-testid` element that renders with no `className` should be a red flag in code review.
+
+---
+
+### Bug #49 — Enter key on focused task card navigates to the wrong task
+
+**Bug ID:** #49
+**Why introduced:** `focusedCardId` in `Board.tsx` is auto-initialized to `tasks[0].id` on mount and only updated by `j`/`k` hotkeys. Tab navigation updates DOM focus but never calls `setFocusedCardId`, so the Enter hotkey handler fired with a stale closure pointing at the auto-initialized task (the most recently created one) rather than the Tab-focused card.
+**Who/where:** `frontend/src/routes/Board.tsx` — `enter` hotkey handler (lines ~355–357) used `focusedCardId` exclusively; the auto-init `useEffect` (lines ~167–171) set it to `tasks[0].id` unconditionally.
+**Where it should have been caught:** An E2E test that Tabs to a specific task card and asserts the navigated URL matches that card, not a different one. Tab-to-Enter keyboard flow was never tested.
+**What to avoid:** When there are two parallel "focus" concepts (keyboard-tracked state vs. DOM focus), the hotkey handler must check both. DOM `document.activeElement` is the source of truth for Tab navigation; `focusedCardId` only covers j/k navigation.
