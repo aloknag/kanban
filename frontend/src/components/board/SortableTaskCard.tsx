@@ -8,7 +8,8 @@
  * - On drop, card flies in 120ms with --m-easing
  */
 
-import { useDraggable } from '@dnd-kit/core'
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { CSSProperties } from 'react'
 import { Task } from '../../lib/api'
 import { TaskCard } from './TaskCard'
@@ -24,15 +25,18 @@ export function SortableTaskCard({ task, isNew = false, isFocused = false }: Pro
     attributes,
     listeners,
     setNodeRef,
+    transform,
+    transition,
     isDragging,
-  } = useDraggable({
+  } = useSortable({
     id: `task-${task.id}`,
     data: { type: 'Task', task },
   })
 
   const style: CSSProperties = {
     opacity: isDragging ? 0.4 : 1,
-    transition: isDragging ? 'opacity 80ms ease-out' : 'opacity 160ms ease-out',
+    transition,
+    transform: CSS.Transform.toString(transform),
   }
 
   return (
