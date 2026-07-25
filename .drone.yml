@@ -34,7 +34,7 @@ steps:
       DOCKER_HOST: unix:///var/run/docker.sock
     commands:
       - echo "Building backend Docker image..."
-      - docker build -f Dockerfile.backend -t kanban-backend:${DRONE_COMMIT_SHA:0:7} -t kanban-backend:latest .
+      - docker build -f docker/Dockerfile.backend -t kanban-backend:${DRONE_COMMIT_SHA:0:7} -t kanban-backend:latest .
       - docker images | grep kanban-backend
 
   # Step 3: Build frontend image
@@ -47,7 +47,7 @@ steps:
       DOCKER_HOST: unix:///var/run/docker.sock
     commands:
       - echo "Building frontend Docker image..."
-      - docker build -f Dockerfile.frontend -t kanban-frontend:${DRONE_COMMIT_SHA:0:7} -t kanban-frontend:latest .
+      - docker build -f docker/Dockerfile.frontend -t kanban-frontend:${DRONE_COMMIT_SHA:0:7} -t kanban-frontend:latest .
       - docker images | grep kanban-frontend
 
   # Step 4: Start services with docker-compose

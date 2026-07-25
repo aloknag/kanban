@@ -115,7 +115,7 @@ docker compose logs -f frontend
 
 ### Backend Service
 
-**Image:** `kanban-backend` (built from `Dockerfile.backend`)
+**Image:** `kanban-backend` (built from `docker/Dockerfile.backend`)
 
 **Stack:**
 - Python 3.12 on Alpine Linux
@@ -139,7 +139,7 @@ docker compose logs -f frontend
 
 ### Frontend Service
 
-**Image:** `kanban-frontend` (built from `Dockerfile.frontend`)
+**Image:** `kanban-frontend` (built from `docker/Dockerfile.frontend`)
 
 **Stack:**
 - Node.js 20 on Alpine Linux

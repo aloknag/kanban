@@ -70,3 +70,22 @@ evidences/
 
 # Playwright MCP session data
 .playwright-mcp/
+
+# Secrets / local MCP server config (contains API keys - never commit)
+.mcp.json
+.claude/.mcp.json
+
+# Personal/local Claude Code settings (machine-specific, not shared)
+.claude/settings.local.json
+
+# Claude Code agent orchestration run state (ephemeral, regenerated per run)
+project_items.json
+wave_tasks.json
+.claude/scheduled_tasks.lock
+
+# Superpowers skill runtime/scratch state (brainstorming sessions, etc.)
+.superpowers/
+
+# Local tool state / crash artifacts
+.gitnexus/
+*.stackdump

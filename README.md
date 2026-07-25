@@ -89,7 +89,7 @@ The server will initialize the database and directory structure automatically:
 
 ## API Overview
 
-All endpoints are under `/api`. Full specification in `TDD.md`.
+All endpoints are under `/api`. Full specification in `docs/TDD.md`.
 
 ### Columns
 ```
@@ -339,7 +339,8 @@ kanban/
 │   └── src/                 # React components (to be implemented)
 ├── Makefile
 ├── pyproject.toml
-└── TDD.md                   # Technical Design Document
+└── docs/
+    └── TDD.md                # Technical Design Document
 ```
 
 ### Development Workflow
@@ -444,4 +445,4 @@ Environment variables:
 - Project structure, configs, and dependencies ready
 - Components to be implemented: Board, Epics, Detail views, Comment threads, DnD
 
-**See:** `TDD.md` for full design specification
+**See:** `docs/TDD.md` for full design specification

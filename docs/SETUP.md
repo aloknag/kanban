@@ -163,8 +163,9 @@ kanban/
 ├── docs/                         # Documentation
 │   ├── DOCKER.md                # Docker deployment guide
 │   └── SETUP.md                 # This file
-├── Dockerfile.backend           # Backend Docker image
-├── Dockerfile.frontend          # Frontend Docker image
+├── docker/
+│   ├── Dockerfile.backend       # Backend Docker image
+│   └── Dockerfile.frontend      # Frontend Docker image
 ├── docker-compose.yml           # Docker Compose orchestration
 ├── .dockerignore                # Docker build context exclusions
 ├── .env.example                 # Environment variables template
