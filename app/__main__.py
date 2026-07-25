@@ -22,8 +22,8 @@ def main():
     )
     parser.add_argument(
         "--host",
-        default="0.0.0.0",
-        help="Host to bind to (default: 0.0.0.0)"
+        default="127.0.0.1",
+        help="Host to bind to (default: 127.0.0.1; pass --host 0.0.0.0 to expose on the network)"
     )
     parser.add_argument(
         "--port",
