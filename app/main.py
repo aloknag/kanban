@@ -558,6 +558,12 @@ def create_app(data_folder: Path) -> FastAPI:
         """Delete an epic."""
         db = await get_db()
         try:
+            task_count = await _count_referencing(db, "tasks", "epic_id", epic_id)
+            if task_count:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Cannot delete epic: {task_count} task(s) still reference it",
+                )
             await db.execute("DELETE FROM epics WHERE id = ?", (epic_id,))
             await db.commit()
         finally:

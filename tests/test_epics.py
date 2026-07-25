@@ -139,3 +139,44 @@ async def test_delete_epic_removes_it():
 
             list_response = await client.get("/api/epics")
             assert len(list_response.json()) == 0
+
+
+@pytest.mark.asyncio
+async def test_delete_epic_with_tasks_returns_409():
+    """DELETE /api/epics/{id} returns 409, not 500, when the epic still has linked tasks (bug #57)."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        epics_dir = data_folder / "epics"
+        epics_dir.mkdir()
+        (epics_dir / "test.md").write_text("# Epic\n")
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            create_response = await client.post(
+                "/api/epics",
+                json={
+                    "title": "Epic with tasks",
+                    "content_path": "epics/test.md",
+                    "column_id": 1
+                }
+            )
+            epic_id = create_response.json()["id"]
+
+            await client.post(
+                "/api/tasks",
+                json={
+                    "title": "Linked task",
+                    "content_path": "tasks/linked.md",
+                    "column_id": 1,
+                    "epic_id": epic_id,
+                }
+            )
+
+            response = await client.delete(f"/api/epics/{epic_id}")
+            assert response.status_code == 409
+
+            # Epic must still exist — no data loss from the failed delete
+            get_response = await client.get(f"/api/epics/{epic_id}")
+            assert get_response.status_code == 200
