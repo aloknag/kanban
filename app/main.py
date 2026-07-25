@@ -11,6 +11,13 @@ from app.paths import validate_content_path, read_content, get_excerpt_cached
 from app.models import ColumnResponse
 
 
+async def _count_referencing(db: aiosqlite.Connection, table: str, column: str, value: int) -> int:
+    """Count rows in `table` whose `column` equals `value` (FK dependency check)."""
+    cursor = await db.execute(f"SELECT COUNT(*) FROM {table} WHERE {column} = ?", (value,))
+    row = await cursor.fetchone()
+    return row[0] if row else 0
+
+
 def create_app(data_folder: Path) -> FastAPI:
     """Create FastAPI app instance."""
 
@@ -155,6 +162,13 @@ def create_app(data_folder: Path) -> FastAPI:
         """Delete a column."""
         db = await get_db()
         try:
+            task_count = await _count_referencing(db, "tasks", "column_id", column_id)
+            epic_count = await _count_referencing(db, "epics", "column_id", column_id)
+            if task_count or epic_count:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Cannot delete column: {task_count} task(s) and {epic_count} epic(s) still reference it",
+                )
             await db.execute("DELETE FROM columns WHERE id = ?", (column_id,))
             await db.commit()
         finally:

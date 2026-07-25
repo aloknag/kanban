@@ -294,3 +294,61 @@ async def test_reorder_columns_rejects_invalid_ids():
             assert response.status_code == 400
             error = response.json()
             assert "detail" in error
+
+
+@pytest.mark.asyncio
+async def test_delete_column_with_tasks_returns_409():
+    """DELETE /api/columns/{id} returns 409, not 500, when the column still has tasks (bug #56)."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            list_response = await client.get("/api/columns")
+            todo_id = list_response.json()[0]["id"]
+
+            await client.post(
+                "/api/tasks",
+                json={
+                    "title": "Blocking task",
+                    "content_path": "tasks/blocking.md",
+                    "column_id": todo_id,
+                }
+            )
+
+            response = await client.delete(f"/api/columns/{todo_id}")
+            assert response.status_code == 409
+
+            # Column must still exist — delete must not have partially applied
+            list_response = await client.get("/api/columns")
+            assert any(c["id"] == todo_id for c in list_response.json())
+
+
+@pytest.mark.asyncio
+async def test_delete_column_with_epic_returns_409():
+    """DELETE /api/columns/{id} also blocks when an epic (not just a task) references it."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        epics_dir = data_folder / "epics"
+        epics_dir.mkdir()
+        (epics_dir / "test.md").write_text("# Epic\n")
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            list_response = await client.get("/api/columns")
+            todo_id = list_response.json()[0]["id"]
+
+            await client.post(
+                "/api/epics",
+                json={
+                    "title": "Blocking epic",
+                    "content_path": "epics/test.md",
+                    "column_id": todo_id,
+                }
+            )
+
+            response = await client.delete(f"/api/columns/{todo_id}")
+            assert response.status_code == 409
