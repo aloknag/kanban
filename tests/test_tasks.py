@@ -309,6 +309,31 @@ async def test_post_task_rejects_nonexistent_column_id():
 
 
 @pytest.mark.asyncio
+async def test_post_task_oversized_column_id_returns_400():
+    """POST /api/tasks with an oversized numeric column_id returns 400, not a 500 (Copilot review, PR #1)."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        tasks_dir = data_folder / "tasks"
+        tasks_dir.mkdir()
+        (tasks_dir / "test.md").write_text("# Test\n")
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            response = await client.post(
+                "/api/tasks",
+                json={
+                    "title": "Task with oversized column",
+                    "content_path": "tasks/test.md",
+                    "column_id": 99999999999999999999999999,
+                }
+            )
+            assert response.status_code == 400
+            assert response.json()["detail"] == "Invalid column_id"
+
+
+@pytest.mark.asyncio
 async def test_post_task_after_failed_create_does_not_500():
     """Exact QA repro for #59: a failed (400) create must not poison the next create into a false 500."""
     with tempfile.TemporaryDirectory() as tmpdir:

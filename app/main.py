@@ -19,6 +19,15 @@ async def _count_referencing(db: aiosqlite.Connection, table: str, column: str, 
     return int(row[0]) if row else 0
 
 
+def _fits_sqlite_int(value: object) -> bool:
+    """True if `value` is an int (not bool) that fits SQLite's signed 64-bit INTEGER column.
+
+    Binding an out-of-range or non-int value directly into a query raises an unhandled
+    OverflowError/InterfaceError deep in the sqlite3 driver instead of a clean 4xx.
+    """
+    return isinstance(value, int) and not isinstance(value, bool) and -(2**63) <= value < 2**63
+
+
 def create_app(data_folder: Path) -> FastAPI:
     """Create FastAPI app instance."""
 
@@ -187,7 +196,7 @@ def create_app(data_folder: Path) -> FastAPI:
     @app.get("/api/tasks")
     async def list_tasks(column_id: int | None = None):
         """List all tasks with excerpt field, optionally filtered by column_id."""
-        if column_id is not None and not (-(2**63) <= column_id < 2**63):
+        if column_id is not None and not _fits_sqlite_int(column_id):
             # Out of SQLite's INTEGER range -- no column could ever match, so it's an empty result
             return []
 
@@ -233,6 +242,9 @@ def create_app(data_folder: Path) -> FastAPI:
         if not content_path or not validate_content_path(content_path, data_folder):
             raise HTTPException(status_code=400, detail="invalid_path")
 
+        if not _fits_sqlite_int(column_id):
+            raise HTTPException(status_code=400, detail="Invalid column_id")
+
         db = await get_db()
         try:
             cursor = await db.execute("SELECT id FROM columns WHERE id = ?", (column_id,))
@@ -241,6 +253,8 @@ def create_app(data_folder: Path) -> FastAPI:
 
             epic_id = body.get("epic_id")
             if epic_id is not None:
+                if not _fits_sqlite_int(epic_id):
+                    raise HTTPException(status_code=400, detail="Invalid epic_id")
                 cursor = await db.execute("SELECT id FROM epics WHERE id = ?", (epic_id,))
                 if not await cursor.fetchone():
                     raise HTTPException(status_code=400, detail="Invalid epic_id")
@@ -279,7 +293,7 @@ def create_app(data_folder: Path) -> FastAPI:
     @app.get("/api/tasks/{task_id}")
     async def get_task(task_id: int):
         """Get task detail with content and excerpt."""
-        if not (-(2**63) <= task_id < 2**63):
+        if not _fits_sqlite_int(task_id):
             # Out of SQLite's INTEGER range -- no row could ever match, so it's a 404
             raise HTTPException(status_code=404, detail="Not found")
 
@@ -448,6 +462,8 @@ def create_app(data_folder: Path) -> FastAPI:
             raise HTTPException(status_code=400, detail="invalid_path")
 
         column_id = body.get("column_id", 1)
+        if not _fits_sqlite_int(column_id):
+            raise HTTPException(status_code=400, detail="Invalid column_id")
 
         db = await get_db()
         try:
@@ -562,6 +578,8 @@ def create_app(data_folder: Path) -> FastAPI:
 
             # Validate column_id if it's being updated
             if "column_id" in body:
+                if not _fits_sqlite_int(body["column_id"]):
+                    raise HTTPException(status_code=400, detail="Invalid column_id")
                 cursor = await db.execute("SELECT id FROM columns WHERE id = ?", (body["column_id"],))
                 if not await cursor.fetchone():
                     raise HTTPException(status_code=400, detail="Invalid column_id")
