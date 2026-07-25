@@ -15,7 +15,7 @@ async def _count_referencing(db: aiosqlite.Connection, table: str, column: str, 
     """Count rows in `table` whose `column` equals `value` (FK dependency check)."""
     cursor = await db.execute(f"SELECT COUNT(*) FROM {table} WHERE {column} = ?", (value,))
     row = await cursor.fetchone()
-    return row[0] if row else 0
+    return int(row[0]) if row else 0
 
 
 def create_app(data_folder: Path) -> FastAPI:
