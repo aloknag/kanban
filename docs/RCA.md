@@ -135,3 +135,13 @@ Avoid: Treat Docker Compose as the only valid acceptance environment; any API co
 **Who/where:** `app/main.py` — `list_tasks()` had no parameters at all, so FastAPI never bound the query string to anything.
 **Where it should have been caught:** Any test exercising `GET /api/tasks?column_id=N` against a board with tasks in multiple columns. Existing tests only checked the unfiltered endpoint.
 **What to avoid:** An API contract implied by other endpoints' filtering conventions (or by the frontend's needs) should have an explicit test for the filtered case, not just the default case.
+
+---
+
+### Bug #55 — GET /api/columns task_count does not match actual per-column task counts
+
+**Bug ID:** #55
+**Why introduced:** The original task_count feature (closes #16) deliberately excluded epic-linked tasks via `LEFT JOIN tasks t ON c.id = t.column_id AND t.epic_id IS NULL`, with a test locking in that exclusion. This design decision was never revisited once epics became a common part of real usage, at which point the field stopped reflecting the actual per-column task total that QA (and any API consumer) would reasonably expect.
+**Who/where:** `app/main.py` — `list_columns()` and `update_column()`, both with the same stray `AND t.epic_id IS NULL` join condition.
+**Where it should have been caught:** Confirmed with the maintainer during this fix that the original exclusion was not an intentional contract worth keeping — should have been re-evaluated when epics were introduced, or caught by an integration test cross-checking GET /api/columns task_count against GET /api/tasks counts grouped by column.
+**What to avoid:** A test that locks in a specific numeric exclusion (e.g. "excludes epic tasks") should record *why* that's correct, not just *that* it's correct — otherwise a later regression looks identical to the original intended behavior, and nothing flags that the intent itself may be wrong.

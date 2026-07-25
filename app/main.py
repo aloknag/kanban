@@ -58,7 +58,7 @@ def create_app(data_folder: Path) -> FastAPI:
                     c.id, c.name, c.position,
                     COUNT(t.id) as task_count
                 FROM columns c
-                LEFT JOIN tasks t ON c.id = t.column_id AND t.epic_id IS NULL
+                LEFT JOIN tasks t ON c.id = t.column_id
                 GROUP BY c.id, c.name, c.position
                 ORDER BY c.position"""
             )
@@ -151,7 +151,7 @@ def create_app(data_folder: Path) -> FastAPI:
                 """SELECT c.id, c.name, c.position,
                        COUNT(t.id) as task_count
                 FROM columns c
-                LEFT JOIN tasks t ON c.id = t.column_id AND t.epic_id IS NULL
+                LEFT JOIN tasks t ON c.id = t.column_id
                 WHERE c.id = ?
                 GROUP BY c.id, c.name, c.position""",
                 (column_id,)
