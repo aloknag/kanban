@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
+import os
 import aiosqlite
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -28,9 +29,15 @@ def create_app(data_folder: Path) -> FastAPI:
 
     app = FastAPI(lifespan=lifespan)
 
+    allowed_origins_env = os.environ.get("KANBAN_ALLOWED_ORIGINS")
+    allowed_origins = (
+        [origin.strip() for origin in allowed_origins_env.split(",")]
+        if allowed_origins_env
+        else ["http://localhost:5173", "http://127.0.0.1:5173"]
+    )
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=allowed_origins,
         allow_methods=["*"],
         allow_headers=["*"],
     )
