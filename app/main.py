@@ -141,9 +141,12 @@ def create_app(data_folder: Path) -> FastAPI:
         db = await get_db()
         try:
             if "name" in body:
+                name = body["name"].strip() if isinstance(body["name"], str) else ""
+                if not name:
+                    raise HTTPException(status_code=400, detail="Name cannot be empty")
                 await db.execute(
                     "UPDATE columns SET name = ? WHERE id = ?",
-                    (body["name"], column_id)
+                    (name, column_id)
                 )
                 await db.commit()
 

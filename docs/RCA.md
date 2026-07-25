@@ -157,3 +157,13 @@ Avoid: Treat Docker Compose as the only valid acceptance environment; any API co
 **What to avoid:** Any handler that types a path/query param as `int` and passes it straight to a DB driver should assume the value can be arbitrarily large — validate against the DB column's actual range, don't assume "int" means "int the database can store."
 
 **Follow-up (not fixed here, flagged only):** `get_epic`, `delete_task`, `delete_epic`, `list_task_comments`, and `list_epic_comments` all take the same unchecked `int` path param and share this same latent overflow risk. Worth a dedicated pass to apply the same bounds check (or a shared FastAPI dependency) across all of them rather than fixing one at a time as each is independently reported.
+
+---
+
+### Bug #61 — PATCH /api/columns/{id} allows an empty string as the column name
+
+**Bug ID:** #61
+**Why introduced:** `create_column()` validates `name` (strip + reject-if-empty) but `update_column()` was written later without the same check — the two handlers drifted out of sync.
+**Who/where:** `app/main.py` — `update_column()` wrote `body["name"]` directly with no validation.
+**Where it should have been caught:** Any test exercising PATCH with an empty/whitespace name — the existing PATCH test only covered a valid rename.
+**What to avoid:** When two handlers validate the same field (create vs. update), a change to one's validation should prompt checking the other. This is the third bug in this round (#61, and the column_id gaps in #62) that comes from `update_*`/`create_*` pairs validating a field inconsistently.

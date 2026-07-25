@@ -89,6 +89,29 @@ async def test_patch_column_updates_name():
 
 
 @pytest.mark.asyncio
+async def test_patch_column_rejects_empty_name():
+    """PATCH /api/columns/{id} rejects an empty string name (bug #61)."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            list_response = await client.get("/api/columns")
+            todo_id = list_response.json()[0]["id"]
+
+            response = await client.patch(
+                f"/api/columns/{todo_id}",
+                json={"name": ""}
+            )
+            assert response.status_code == 400
+
+            # The column's name must not have been corrupted by the rejected request
+            list_response = await client.get("/api/columns")
+            assert list_response.json()[0]["name"] == "Todo"
+
+
+@pytest.mark.asyncio
 async def test_delete_column_removes_it():
     """DELETE /api/columns/{id} removes empty column."""
     with tempfile.TemporaryDirectory() as tmpdir:
