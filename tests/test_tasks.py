@@ -124,6 +124,24 @@ async def test_get_task_detail_returns_content():
 
 
 @pytest.mark.asyncio
+async def test_get_task_oversized_id_returns_404():
+    """GET /api/tasks/{id} with an oversized numeric ID returns 404, not 500 (bug #60)."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            # In-range nonexistent ID (control) -- already correctly 404
+            control_response = await client.get("/api/tasks/-5")
+            assert control_response.status_code == 404
+
+            # Oversized ID -- exceeds SQLite's 64-bit integer range
+            response = await client.get("/api/tasks/99999999999999999999999999")
+            assert response.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_patch_task_changes_column():
     """PATCH /api/tasks/{id} can move task to different column."""
     with tempfile.TemporaryDirectory() as tmpdir:

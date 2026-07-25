@@ -145,3 +145,15 @@ Avoid: Treat Docker Compose as the only valid acceptance environment; any API co
 **Who/where:** `app/main.py` — `list_columns()` and `update_column()`, both with the same stray `AND t.epic_id IS NULL` join condition.
 **Where it should have been caught:** Confirmed with the maintainer during this fix that the original exclusion was not an intentional contract worth keeping — should have been re-evaluated when epics were introduced, or caught by an integration test cross-checking GET /api/columns task_count against GET /api/tasks counts grouped by column.
 **What to avoid:** A test that locks in a specific numeric exclusion (e.g. "excludes epic tasks") should record *why* that's correct, not just *that* it's correct — otherwise a later regression looks identical to the original intended behavior, and nothing flags that the intent itself may be wrong.
+
+---
+
+### Bug #60 — GET /api/tasks/{id} with an oversized numeric ID returns 500 instead of 404
+
+**Bug ID:** #60
+**Why introduced:** `task_id: int` in the FastAPI path param accepts any Python integer (arbitrary precision), but the value is bound directly into a SQLite query, and SQLite's INTEGER column is a signed 64-bit type. Nothing bounded the value before it reached the database driver.
+**Who/where:** `app/main.py` — `get_task(task_id: int)`.
+**Where it should have been caught:** A boundary-value test for path params (very large / very small integers), not just the in-range nonexistent-ID case that was already tested via `-5`.
+**What to avoid:** Any handler that types a path/query param as `int` and passes it straight to a DB driver should assume the value can be arbitrarily large — validate against the DB column's actual range, don't assume "int" means "int the database can store."
+
+**Follow-up (not fixed here, flagged only):** `get_epic`, `delete_task`, `delete_epic`, `list_task_comments`, and `list_epic_comments` all take the same unchecked `int` path param and share this same latent overflow risk. Worth a dedicated pass to apply the same bounds check (or a shared FastAPI dependency) across all of them rather than fixing one at a time as each is independently reported.

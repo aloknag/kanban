@@ -272,6 +272,10 @@ def create_app(data_folder: Path) -> FastAPI:
     @app.get("/api/tasks/{task_id}")
     async def get_task(task_id: int):
         """Get task detail with content and excerpt."""
+        if not (-(2**63) <= task_id < 2**63):
+            # Out of SQLite's INTEGER range -- no row could ever match, so it's a 404
+            raise HTTPException(status_code=404, detail="Not found")
+
         db = await get_db()
         try:
             cursor = await db.execute(
