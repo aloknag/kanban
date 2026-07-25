@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Plate } from '../components/catalog/Plate'
 import { TopRule } from '../components/chrome/TopRule'

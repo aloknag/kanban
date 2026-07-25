@@ -9,7 +9,7 @@
  * - No forbidden classes: shadow-, rounded-*, transform, scale-, backdrop-blur
  */
 
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { useEffect, useState } from 'react'
 import { Task } from '../../lib/api'
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createBrowserRouter, RouteObject } from 'react-router-dom'
+import { createBrowserRouter, RouteObject } from 'react-router'
 
 describe('Router Configuration', () => {
   it('should have a /board route', () => {

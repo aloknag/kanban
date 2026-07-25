@@ -10,7 +10,7 @@
 
 import { describe, it, expect } from 'vitest'
 import { render } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
+import { BrowserRouter } from 'react-router'
 import { Column } from '../components/board/Column'
 import { SortableColumn } from '../components/board/SortableColumn'
 import { Column as ColumnType, Task } from '../lib/api'

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
+import { BrowserRouter } from 'react-router'
 import { DetailHeader } from '../DetailHeader'
 import type { TaskDetail, EpicDetail } from '../../../lib/api'
 

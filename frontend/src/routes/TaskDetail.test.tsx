@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
+import { BrowserRouter } from 'react-router'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { TaskDetail } from './TaskDetail'
 import { createQueryClient } from '../lib/queryClient'
@@ -8,8 +8,8 @@ import { ThemeProvider } from '../system/ThemeProvider'
 import * as api from '../lib/api'
 
 // Mock useParams to return a valid task ID
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom')
+vi.mock('react-router', async () => {
+  const actual = await vi.importActual('react-router')
   return {
     ...actual,
     useParams: () => ({ id: '14' }),

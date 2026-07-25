@@ -8,7 +8,7 @@
  * - Right: UTC clock and poll indicator glyph
  */
 
-import { useLocation, Link } from 'react-router-dom'
+import { useLocation, Link } from 'react-router'
 import { useState, useEffect, useRef } from 'react'
 import { useTheme } from '../../system/ThemeProvider'
 import { PollIndicator } from '../../system/PollIndicator'

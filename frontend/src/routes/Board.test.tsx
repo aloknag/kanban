@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
+import { BrowserRouter } from 'react-router'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { Board } from './Board'
 import { HotkeyProvider } from '../system/HotkeyProvider'

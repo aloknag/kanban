@@ -10,7 +10,7 @@
  * - Optional file_missing warning chip
  */
 
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import type { TaskDetail, EpicDetail } from '../../lib/api'
 
 interface DetailHeaderProps {

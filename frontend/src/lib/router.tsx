@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate, RouteObject } from 'react-router-dom'
+import { createBrowserRouter, Navigate, RouteObject } from 'react-router'
 import { Board } from '../routes/Board'
 import { Epics } from '../routes/Epics'
 import { TaskDetail } from '../routes/TaskDetail'

@@ -17,7 +17,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import {
   DndContext,
   DragEndEvent,
