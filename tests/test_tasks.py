@@ -222,6 +222,31 @@ async def test_post_task_rejects_nonexistent_epic_id():
 
 
 @pytest.mark.asyncio
+async def test_post_task_rejects_nonexistent_column_id():
+    """POST /api/tasks with a non-existent column_id returns 400, not a mislabeled 500 slug_collision (bug #62)."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        tasks_dir = data_folder / "tasks"
+        tasks_dir.mkdir()
+        (tasks_dir / "test.md").write_text("# Test\n")
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            response = await client.post(
+                "/api/tasks",
+                json={
+                    "title": "Task with bad column",
+                    "content_path": "tasks/test.md",
+                    "column_id": 99999,
+                }
+            )
+            assert response.status_code == 400
+            assert response.json()["detail"] == "Invalid column_id"
+
+
+@pytest.mark.asyncio
 async def test_post_task_after_failed_create_does_not_500():
     """Exact QA repro for #59: a failed (400) create must not poison the next create into a false 500."""
     with tempfile.TemporaryDirectory() as tmpdir:

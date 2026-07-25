@@ -222,6 +222,10 @@ def create_app(data_folder: Path) -> FastAPI:
 
         db = await get_db()
         try:
+            cursor = await db.execute("SELECT id FROM columns WHERE id = ?", (column_id,))
+            if not await cursor.fetchone():
+                raise HTTPException(status_code=400, detail="Invalid column_id")
+
             epic_id = body.get("epic_id")
             if epic_id is not None:
                 cursor = await db.execute("SELECT id FROM epics WHERE id = ?", (epic_id,))
@@ -430,6 +434,10 @@ def create_app(data_folder: Path) -> FastAPI:
 
         db = await get_db()
         try:
+            cursor = await db.execute("SELECT id FROM columns WHERE id = ?", (column_id,))
+            if not await cursor.fetchone():
+                raise HTTPException(status_code=400, detail="Invalid column_id")
+
             now = datetime.now(timezone.utc).isoformat()
             # Retry loop guards against slug UNIQUE constraint collision under concurrency (CR-10)
             for attempt in range(10):
@@ -534,6 +542,12 @@ def create_app(data_folder: Path) -> FastAPI:
             # Validate content_path if it's being updated
             if "content_path" in body and not validate_content_path(body["content_path"], data_folder):
                 raise HTTPException(status_code=400, detail="invalid_path")
+
+            # Validate column_id if it's being updated
+            if "column_id" in body:
+                cursor = await db.execute("SELECT id FROM columns WHERE id = ?", (body["column_id"],))
+                if not await cursor.fetchone():
+                    raise HTTPException(status_code=400, detail="Invalid column_id")
 
             for field in ["title", "content_path", "assignee", "column_id"]:
                 if field in body:

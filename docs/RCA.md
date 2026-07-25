@@ -115,3 +115,13 @@ Avoid: Treat Docker Compose as the only valid acceptance environment; any API co
 **Who/where:** `frontend/src/routes/Board.tsx` — `enter` hotkey handler (lines ~355–357) used `focusedCardId` exclusively; the auto-init `useEffect` (lines ~167–171) set it to `tasks[0].id` unconditionally.
 **Where it should have been caught:** An E2E test that Tabs to a specific task card and asserts the navigated URL matches that card, not a different one. Tab-to-Enter keyboard flow was never tested.
 **What to avoid:** When there are two parallel "focus" concepts (keyboard-tracked state vs. DOM focus), the hotkey handler must check both. DOM `document.activeElement` is the source of truth for Tab navigation; `focusedCardId` only covers j/k navigation.
+
+---
+
+### Bug #62 — POST /api/tasks, POST /api/epics, PATCH /api/epics/{id} still 500 on invalid column_id
+
+**Bug ID:** #62
+**Why introduced:** The FK-validation pass for #56-#59 added existence checks for `epic_id` on `create_task`/`update_task` and dependency checks on `delete_column`/`delete_epic`, but never audited the sibling `column_id` paths on `create_task`, `create_epic`, and `update_epic` — `update_task` already validated `column_id`, creating an inconsistent pattern across otherwise-parallel handlers.
+**Who/where:** `app/main.py` — `create_task` (no column_id check before insert), `create_epic` (same), `update_epic` (no column_id check at all, unlike `update_task`).
+**Where it should have been caught:** The #56-#59 fix PR should have grepped for every `column_id`/`epic_id` write path and confirmed each had a matching existence check, rather than fixing only the specific call site each issue reported.
+**What to avoid:** When fixing "missing FK validation" as a bug class, enumerate all call sites for that FK column across the file, not just the one in the report. `create_task`/`create_epic`'s broad `except Exception: raise HTTPException(500, "slug_collision")` in the slug-retry loop also remains a standing risk — it will mislabel any future unhandled FK/DB error on these tables as a slug collision; narrowing it to catch only the actual UNIQUE-constraint case (not fixed here, flagged by the issue as optional) would prevent this bug class from recurring for any new FK added later.
