@@ -182,13 +182,19 @@ def create_app(data_folder: Path) -> FastAPI:
             await db.close()
 
     @app.get("/api/tasks")
-    async def list_tasks():
-        """List all tasks with excerpt field."""
+    async def list_tasks(column_id: int | None = None):
+        """List all tasks with excerpt field, optionally filtered by column_id."""
         db = await get_db()
         try:
-            cursor = await db.execute(
-                "SELECT id, slug, title, content_path, assignee, column_id, epic_id FROM tasks ORDER BY created_at DESC"
-            )
+            if column_id is not None:
+                cursor = await db.execute(
+                    "SELECT id, slug, title, content_path, assignee, column_id, epic_id FROM tasks WHERE column_id = ? ORDER BY created_at DESC",
+                    (column_id,)
+                )
+            else:
+                cursor = await db.execute(
+                    "SELECT id, slug, title, content_path, assignee, column_id, epic_id FROM tasks ORDER BY created_at DESC"
+                )
             rows = await cursor.fetchall()
             result = []
             for row in rows:

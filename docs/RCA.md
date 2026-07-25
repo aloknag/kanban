@@ -125,3 +125,13 @@ Avoid: Treat Docker Compose as the only valid acceptance environment; any API co
 **Who/where:** `app/main.py` — `create_task` (no column_id check before insert), `create_epic` (same), `update_epic` (no column_id check at all, unlike `update_task`).
 **Where it should have been caught:** The #56-#59 fix PR should have grepped for every `column_id`/`epic_id` write path and confirmed each had a matching existence check, rather than fixing only the specific call site each issue reported.
 **What to avoid:** When fixing "missing FK validation" as a bug class, enumerate all call sites for that FK column across the file, not just the one in the report. `create_task`/`create_epic`'s broad `except Exception: raise HTTPException(500, "slug_collision")` in the slug-retry loop also remains a standing risk — it will mislabel any future unhandled FK/DB error on these tables as a slug collision; narrowing it to catch only the actual UNIQUE-constraint case (not fixed here, flagged by the issue as optional) would prevent this bug class from recurring for any new FK added later.
+
+---
+
+### Bug #53 — GET /api/tasks?column_id=N ignores filter
+
+**Bug ID:** #53
+**Why introduced:** `list_tasks()` was written to just return every task; a `column_id` query filter was never added when the endpoint was first built, and no test asserted the filter worked (only that the unfiltered list worked).
+**Who/where:** `app/main.py` — `list_tasks()` had no parameters at all, so FastAPI never bound the query string to anything.
+**Where it should have been caught:** Any test exercising `GET /api/tasks?column_id=N` against a board with tasks in multiple columns. Existing tests only checked the unfiltered endpoint.
+**What to avoid:** An API contract implied by other endpoints' filtering conventions (or by the frontend's needs) should have an explicit test for the filtered case, not just the default case.

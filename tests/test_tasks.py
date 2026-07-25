@@ -21,6 +21,36 @@ async def test_get_tasks_returns_empty():
 
 
 @pytest.mark.asyncio
+async def test_get_tasks_filters_by_column_id():
+    """GET /api/tasks?column_id=N returns only tasks in that column (bug #53)."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        tasks_dir = data_folder / "tasks"
+        tasks_dir.mkdir()
+        (tasks_dir / "test.md").write_text("# Test\n")
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            for column_id in (1, 2, 3):
+                await client.post(
+                    "/api/tasks",
+                    json={
+                        "title": f"Task in column {column_id}",
+                        "content_path": "tasks/test.md",
+                        "column_id": column_id,
+                    }
+                )
+
+            response = await client.get("/api/tasks?column_id=2")
+            assert response.status_code == 200
+            tasks = response.json()
+            assert len(tasks) == 1
+            assert tasks[0]["column_id"] == 2
+
+
+@pytest.mark.asyncio
 async def test_post_task_creates_task():
     """POST /api/tasks creates a task with generated slug."""
     with tempfile.TemporaryDirectory() as tmpdir:
