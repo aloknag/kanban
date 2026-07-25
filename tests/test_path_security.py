@@ -94,3 +94,67 @@ async def test_epic_path_validation():
             )
 
             assert response.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_patch_task_rejects_path_traversal():
+    """PATCH /api/tasks/{id} rejects path traversal attacks in content_path."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        tasks_dir = data_folder / "tasks"
+        tasks_dir.mkdir()
+        (tasks_dir / "test.md").write_text("# Test\n")
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            create_response = await client.post(
+                "/api/tasks",
+                json={
+                    "title": "Task",
+                    "content_path": "tasks/test.md",
+                    "column_id": 1
+                }
+            )
+            task_id = create_response.json()["id"]
+
+            response = await client.patch(
+                f"/api/tasks/{task_id}",
+                json={"content_path": "../../etc/passwd"}
+            )
+
+            assert response.status_code == 400
+            assert "invalid_path" in str(response.json().get("detail", ""))
+
+
+@pytest.mark.asyncio
+async def test_patch_epic_rejects_path_traversal():
+    """PATCH /api/epics/{id} rejects path traversal attacks in content_path."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        epics_dir = data_folder / "epics"
+        epics_dir.mkdir()
+        (epics_dir / "test.md").write_text("# Epic\n")
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            create_response = await client.post(
+                "/api/epics",
+                json={
+                    "title": "Epic",
+                    "content_path": "epics/test.md",
+                    "column_id": 1
+                }
+            )
+            epic_id = create_response.json()["id"]
+
+            response = await client.patch(
+                f"/api/epics/{epic_id}",
+                json={"content_path": "../../etc/passwd"}
+            )
+
+            assert response.status_code == 400
+            assert "invalid_path" in str(response.json().get("detail", ""))

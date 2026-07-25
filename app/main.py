@@ -322,6 +322,10 @@ def create_app(data_folder: Path) -> FastAPI:
             if "title" in body and not body["title"].strip():
                 raise HTTPException(status_code=400, detail="Title cannot be empty")
 
+            # Validate content_path if it's being updated
+            if "content_path" in body and not validate_content_path(body["content_path"], data_folder):
+                raise HTTPException(status_code=400, detail="invalid_path")
+
             for field in ["title", "content_path", "assignee", "column_id", "epic_id"]:
                 if field in body:
                     updates.append(f"{field} = ?")
@@ -526,6 +530,10 @@ def create_app(data_folder: Path) -> FastAPI:
             now = datetime.now(timezone.utc).isoformat()
             updates = []
             values = []
+
+            # Validate content_path if it's being updated
+            if "content_path" in body and not validate_content_path(body["content_path"], data_folder):
+                raise HTTPException(status_code=400, detail="invalid_path")
 
             for field in ["title", "content_path", "assignee", "column_id"]:
                 if field in body:
