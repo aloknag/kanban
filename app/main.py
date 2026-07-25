@@ -187,6 +187,10 @@ def create_app(data_folder: Path) -> FastAPI:
     @app.get("/api/tasks")
     async def list_tasks(column_id: int | None = None):
         """List all tasks with excerpt field, optionally filtered by column_id."""
+        if column_id is not None and not (-(2**63) <= column_id < 2**63):
+            # Out of SQLite's INTEGER range -- no column could ever match, so it's an empty result
+            return []
+
         db = await get_db()
         try:
             if column_id is not None:

@@ -51,6 +51,20 @@ async def test_get_tasks_filters_by_column_id():
 
 
 @pytest.mark.asyncio
+async def test_get_tasks_oversized_column_id_returns_empty():
+    """GET /api/tasks?column_id=N with an oversized value returns [], not a 500 (Copilot review, PR #1)."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            response = await client.get("/api/tasks?column_id=99999999999999999999999999")
+            assert response.status_code == 200
+            assert response.json() == []
+
+
+@pytest.mark.asyncio
 async def test_post_task_creates_task():
     """POST /api/tasks creates a task with generated slug."""
     with tempfile.TemporaryDirectory() as tmpdir:
