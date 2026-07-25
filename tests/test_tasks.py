@@ -161,6 +161,41 @@ async def test_patch_task_changes_title():
 
 
 @pytest.mark.asyncio
+async def test_patch_task_rejects_nonexistent_epic_id():
+    """PATCH /api/tasks/{id} with a non-existent epic_id returns 400, not 500 (bug #58)."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        tasks_dir = data_folder / "tasks"
+        tasks_dir.mkdir()
+        (tasks_dir / "test.md").write_text("# Test\n")
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            create_response = await client.post(
+                "/api/tasks",
+                json={
+                    "title": "Task",
+                    "content_path": "tasks/test.md",
+                    "column_id": 1
+                }
+            )
+            task_id = create_response.json()["id"]
+
+            response = await client.patch(
+                f"/api/tasks/{task_id}",
+                json={"epic_id": 999999}
+            )
+            assert response.status_code == 400
+            assert response.json()["detail"] == "Invalid epic_id"
+
+            # The task's epic_id must not have been corrupted by the failed request
+            detail_response = await client.get(f"/api/tasks/{task_id}")
+            assert detail_response.json()["epic_id"] is None
+
+
+@pytest.mark.asyncio
 async def test_delete_task_removes_it():
     """DELETE /api/tasks/{id} removes task."""
     with tempfile.TemporaryDirectory() as tmpdir:

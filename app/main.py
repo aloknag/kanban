@@ -284,6 +284,13 @@ def create_app(data_folder: Path) -> FastAPI:
                 if not await cursor.fetchone():
                     raise HTTPException(status_code=400, detail="Invalid column_id")
 
+            # Validate epic_id if it's being updated (null clears the epic link)
+            if "epic_id" in body and body["epic_id"] is not None:
+                epic_id = body["epic_id"]
+                cursor = await db.execute("SELECT id FROM epics WHERE id = ?", (epic_id,))
+                if not await cursor.fetchone():
+                    raise HTTPException(status_code=400, detail="Invalid epic_id")
+
             # Validate title if it's being updated
             if "title" in body and not body["title"].strip():
                 raise HTTPException(status_code=400, detail="Title cannot be empty")
