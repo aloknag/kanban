@@ -82,6 +82,122 @@ async def test_get_epic_detail_returns_content():
 
 
 @pytest.mark.asyncio
+async def test_post_epic_rejects_nonexistent_column_id():
+    """POST /api/epics with a non-existent column_id returns 400, not a mislabeled 500 slug_collision (bug #62)."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        epics_dir = data_folder / "epics"
+        epics_dir.mkdir()
+        (epics_dir / "test.md").write_text("# Epic\n")
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            response = await client.post(
+                "/api/epics",
+                json={
+                    "title": "Epic with bad column",
+                    "content_path": "epics/test.md",
+                    "column_id": 99999,
+                }
+            )
+            assert response.status_code == 400
+            assert response.json()["detail"] == "Invalid column_id"
+
+
+@pytest.mark.asyncio
+async def test_patch_epic_rejects_nonexistent_column_id():
+    """PATCH /api/epics/{id} with a non-existent column_id returns 400, not an unhandled IntegrityError (bug #62)."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        epics_dir = data_folder / "epics"
+        epics_dir.mkdir()
+        (epics_dir / "test.md").write_text("# Epic\n")
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            create_response = await client.post(
+                "/api/epics",
+                json={
+                    "title": "Epic",
+                    "content_path": "epics/test.md",
+                    "column_id": 1
+                }
+            )
+            epic_id = create_response.json()["id"]
+
+            response = await client.patch(
+                f"/api/epics/{epic_id}",
+                json={"column_id": 99999}
+            )
+            assert response.status_code == 400
+            assert response.json()["detail"] == "Invalid column_id"
+
+            # The epic's column_id must not have been corrupted by the failed request
+            detail_response = await client.get(f"/api/epics/{epic_id}")
+            assert detail_response.json()["column_id"] == 1
+
+
+@pytest.mark.asyncio
+async def test_post_epic_oversized_column_id_returns_400():
+    """POST /api/epics with an oversized numeric column_id returns 400, not a 500 (Copilot review, PR #1)."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        epics_dir = data_folder / "epics"
+        epics_dir.mkdir()
+        (epics_dir / "test.md").write_text("# Epic\n")
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            response = await client.post(
+                "/api/epics",
+                json={
+                    "title": "Epic with oversized column",
+                    "content_path": "epics/test.md",
+                    "column_id": 99999999999999999999999999,
+                }
+            )
+            assert response.status_code == 400
+            assert response.json()["detail"] == "Invalid column_id"
+
+
+@pytest.mark.asyncio
+async def test_patch_epic_oversized_column_id_returns_400():
+    """PATCH /api/epics/{id} with an oversized numeric column_id returns 400, not a 500 (Copilot review, PR #1)."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        epics_dir = data_folder / "epics"
+        epics_dir.mkdir()
+        (epics_dir / "test.md").write_text("# Epic\n")
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            create_response = await client.post(
+                "/api/epics",
+                json={
+                    "title": "Epic",
+                    "content_path": "epics/test.md",
+                    "column_id": 1
+                }
+            )
+            epic_id = create_response.json()["id"]
+
+            response = await client.patch(
+                f"/api/epics/{epic_id}",
+                json={"column_id": 99999999999999999999999999}
+            )
+            assert response.status_code == 400
+            assert response.json()["detail"] == "Invalid column_id"
+
+
+@pytest.mark.asyncio
 async def test_patch_epic_updates():
     """PATCH /api/epics/{id} updates epic."""
     with tempfile.TemporaryDirectory() as tmpdir:

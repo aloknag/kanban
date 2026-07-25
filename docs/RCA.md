@@ -115,3 +115,55 @@ Avoid: Treat Docker Compose as the only valid acceptance environment; any API co
 **Who/where:** `frontend/src/routes/Board.tsx` — `enter` hotkey handler (lines ~355–357) used `focusedCardId` exclusively; the auto-init `useEffect` (lines ~167–171) set it to `tasks[0].id` unconditionally.
 **Where it should have been caught:** An E2E test that Tabs to a specific task card and asserts the navigated URL matches that card, not a different one. Tab-to-Enter keyboard flow was never tested.
 **What to avoid:** When there are two parallel "focus" concepts (keyboard-tracked state vs. DOM focus), the hotkey handler must check both. DOM `document.activeElement` is the source of truth for Tab navigation; `focusedCardId` only covers j/k navigation.
+
+---
+
+### Bug #62 — POST /api/tasks, POST /api/epics, PATCH /api/epics/{id} still 500 on invalid column_id
+
+**Bug ID:** #62
+**Why introduced:** The FK-validation pass for #56-#59 added existence checks for `epic_id` on `create_task`/`update_task` and dependency checks on `delete_column`/`delete_epic`, but never audited the sibling `column_id` paths on `create_task`, `create_epic`, and `update_epic` — `update_task` already validated `column_id`, creating an inconsistent pattern across otherwise-parallel handlers.
+**Who/where:** `app/main.py` — `create_task` (no column_id check before insert), `create_epic` (same), `update_epic` (no column_id check at all, unlike `update_task`).
+**Where it should have been caught:** The #56-#59 fix PR should have grepped for every `column_id`/`epic_id` write path and confirmed each had a matching existence check, rather than fixing only the specific call site each issue reported.
+**What to avoid:** When fixing "missing FK validation" as a bug class, enumerate all call sites for that FK column across the file, not just the one in the report. `create_task`/`create_epic`'s broad `except Exception: raise HTTPException(500, "slug_collision")` in the slug-retry loop also remains a standing risk — it will mislabel any future unhandled FK/DB error on these tables as a slug collision; narrowing it to catch only the actual UNIQUE-constraint case (not fixed here, flagged by the issue as optional) would prevent this bug class from recurring for any new FK added later.
+
+---
+
+### Bug #53 — GET /api/tasks?column_id=N ignores filter
+
+**Bug ID:** #53
+**Why introduced:** `list_tasks()` was written to just return every task; a `column_id` query filter was never added when the endpoint was first built, and no test asserted the filter worked (only that the unfiltered list worked).
+**Who/where:** `app/main.py` — `list_tasks()` had no parameters at all, so FastAPI never bound the query string to anything.
+**Where it should have been caught:** Any test exercising `GET /api/tasks?column_id=N` against a board with tasks in multiple columns. Existing tests only checked the unfiltered endpoint.
+**What to avoid:** An API contract implied by other endpoints' filtering conventions (or by the frontend's needs) should have an explicit test for the filtered case, not just the default case.
+
+---
+
+### Bug #55 — GET /api/columns task_count does not match actual per-column task counts
+
+**Bug ID:** #55
+**Why introduced:** The original task_count feature (closes #16) deliberately excluded epic-linked tasks via `LEFT JOIN tasks t ON c.id = t.column_id AND t.epic_id IS NULL`, with a test locking in that exclusion. This design decision was never revisited once epics became a common part of real usage, at which point the field stopped reflecting the actual per-column task total that QA (and any API consumer) would reasonably expect.
+**Who/where:** `app/main.py` — `list_columns()` and `update_column()`, both with the same stray `AND t.epic_id IS NULL` join condition.
+**Where it should have been caught:** Confirmed with the maintainer during this fix that the original exclusion was not an intentional contract worth keeping — should have been re-evaluated when epics were introduced, or caught by an integration test cross-checking GET /api/columns task_count against GET /api/tasks counts grouped by column.
+**What to avoid:** A test that locks in a specific numeric exclusion (e.g. "excludes epic tasks") should record *why* that's correct, not just *that* it's correct — otherwise a later regression looks identical to the original intended behavior, and nothing flags that the intent itself may be wrong.
+
+---
+
+### Bug #60 — GET /api/tasks/{id} with an oversized numeric ID returns 500 instead of 404
+
+**Bug ID:** #60
+**Why introduced:** `task_id: int` in the FastAPI path param accepts any Python integer (arbitrary precision), but the value is bound directly into a SQLite query, and SQLite's INTEGER column is a signed 64-bit type. Nothing bounded the value before it reached the database driver.
+**Who/where:** `app/main.py` — `get_task(task_id: int)`.
+**Where it should have been caught:** A boundary-value test for path params (very large / very small integers), not just the in-range nonexistent-ID case that was already tested via `-5`.
+**What to avoid:** Any handler that types a path/query param as `int` and passes it straight to a DB driver should assume the value can be arbitrarily large — validate against the DB column's actual range, don't assume "int" means "int the database can store."
+
+**Follow-up (not fixed here, flagged only):** `get_epic`, `delete_task`, `delete_epic`, `list_task_comments`, and `list_epic_comments` all take the same unchecked `int` path param and share this same latent overflow risk. Worth a dedicated pass to apply the same bounds check (or a shared FastAPI dependency) across all of them rather than fixing one at a time as each is independently reported.
+
+---
+
+### Bug #61 — PATCH /api/columns/{id} allows an empty string as the column name
+
+**Bug ID:** #61
+**Why introduced:** `create_column()` validates `name` (strip + reject-if-empty) but `update_column()` was written later without the same check — the two handlers drifted out of sync.
+**Who/where:** `app/main.py` — `update_column()` wrote `body["name"]` directly with no validation.
+**Where it should have been caught:** Any test exercising PATCH with an empty/whitespace name — the existing PATCH test only covered a valid rename.
+**What to avoid:** When two handlers validate the same field (create vs. update), a change to one's validation should prompt checking the other. This is the third bug in this round (#61, and the column_id gaps in #62) that comes from `update_*`/`create_*` pairs validating a field inconsistently.

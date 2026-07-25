@@ -89,6 +89,29 @@ async def test_patch_column_updates_name():
 
 
 @pytest.mark.asyncio
+async def test_patch_column_rejects_empty_name():
+    """PATCH /api/columns/{id} rejects an empty string name (bug #61)."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            list_response = await client.get("/api/columns")
+            todo_id = list_response.json()[0]["id"]
+
+            response = await client.patch(
+                f"/api/columns/{todo_id}",
+                json={"name": ""}
+            )
+            assert response.status_code == 400
+
+            # The column's name must not have been corrupted by the rejected request
+            list_response = await client.get("/api/columns")
+            assert list_response.json()[0]["name"] == "Todo"
+
+
+@pytest.mark.asyncio
 async def test_delete_column_removes_it():
     """DELETE /api/columns/{id} removes empty column."""
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -191,8 +214,8 @@ async def test_get_columns_task_count_with_non_epic_tasks():
 
 
 @pytest.mark.asyncio
-async def test_get_columns_task_count_excludes_epic_tasks():
-    """GET /api/columns task_count excludes tasks with epic_id."""
+async def test_get_columns_task_count_includes_epic_tasks():
+    """GET /api/columns task_count includes tasks with epic_id (bug #55 -- must match actual per-column count)."""
     with tempfile.TemporaryDirectory() as tmpdir:
         data_folder = Path(tmpdir)
         await init_database(data_folder)
@@ -236,12 +259,12 @@ async def test_get_columns_task_count_excludes_epic_tasks():
                 }
             )
 
-            # Get columns and verify task_count only counts non-epic tasks
+            # Get columns and verify task_count counts both tasks, epic-linked or not
             list_response = await client.get("/api/columns")
             columns = list_response.json()
             todo_column = next(c for c in columns if c["id"] == todo_id)
 
-            assert todo_column["task_count"] == 1  # Only the non-epic task
+            assert todo_column["task_count"] == 2
 
 
 @pytest.mark.asyncio
