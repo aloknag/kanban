@@ -196,6 +196,67 @@ async def test_patch_task_rejects_nonexistent_epic_id():
 
 
 @pytest.mark.asyncio
+async def test_post_task_rejects_nonexistent_epic_id():
+    """POST /api/tasks with a non-existent epic_id returns 400, not a mislabeled 500 slug_collision (bug #59)."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        tasks_dir = data_folder / "tasks"
+        tasks_dir.mkdir()
+        (tasks_dir / "test.md").write_text("# Test\n")
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            response = await client.post(
+                "/api/tasks",
+                json={
+                    "title": "Task with bad epic",
+                    "content_path": "tasks/test.md",
+                    "column_id": 1,
+                    "epic_id": 999999,
+                }
+            )
+            assert response.status_code == 400
+            assert response.json()["detail"] == "Invalid epic_id"
+
+
+@pytest.mark.asyncio
+async def test_post_task_after_failed_create_does_not_500():
+    """Exact QA repro for #59: a failed (400) create must not poison the next create into a false 500."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        tasks_dir = data_folder / "tasks"
+        tasks_dir.mkdir()
+        (tasks_dir / "test.md").write_text("# Test\n")
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            # Step 1: intentionally invalid create (no content_path) — expect 400
+            fail_response = await client.post(
+                "/api/tasks",
+                json={"title": "Bad create", "column_id": 1, "epic_id": "abc"}
+            )
+            assert fail_response.status_code == 400
+
+            # Step 2: a similarly-shaped create right after, now with a valid
+            # content_path but still an invalid (non-existent) epic_id
+            ok_response = await client.post(
+                "/api/tasks",
+                json={
+                    "title": "Good create",
+                    "column_id": 1,
+                    "epic_id": "abc",
+                    "content_path": "tasks/test.md",
+                }
+            )
+            assert ok_response.status_code == 400
+            assert ok_response.json()["detail"] == "Invalid epic_id"
+
+
+@pytest.mark.asyncio
 async def test_delete_task_removes_it():
     """DELETE /api/tasks/{id} removes task."""
     with tempfile.TemporaryDirectory() as tmpdir:

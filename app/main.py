@@ -201,6 +201,12 @@ def create_app(data_folder: Path) -> FastAPI:
 
         db = await get_db()
         try:
+            epic_id = body.get("epic_id")
+            if epic_id is not None:
+                cursor = await db.execute("SELECT id FROM epics WHERE id = ?", (epic_id,))
+                if not await cursor.fetchone():
+                    raise HTTPException(status_code=400, detail="Invalid epic_id")
+
             now = datetime.now(timezone.utc).isoformat()
             # Retry loop guards against slug UNIQUE constraint collision under concurrency (CR-10)
             for attempt in range(10):
