@@ -61,8 +61,12 @@ test.describe('Poll Delivers New Card within 6s', () => {
     const taskCardLocator = page.locator(`[data-task-id="${taskId}"]`);
     await expect(taskCardLocator).toBeVisible({ timeout: 6000 });
 
-    // Step 4: Verify the task card has the data-new attribute indicating it is newly created
-    await expect(taskCardLocator).toHaveAttribute('data-new', '');
+    // Step 4: Verify the task card has the data-new attribute indicating it is newly created.
+    // TaskCard renders `data-new={showNew || undefined}` (see TaskCard.tsx), which React
+    // serializes as data-new="true" (not an empty string) -- the styling in index.css and
+    // the Tailwind `data-[new]:` variant both key off attribute *presence*, not its value,
+    // so we assert presence rather than an exact value.
+    await expect(taskCardLocator).toHaveAttribute('data-new', /.+/);
 
     // Step 5: Assert the element has the signal rule box-shadow with inset
     // The signal rule is applied via CSS: box-shadow: inset 1px 0 0 var(--c-signal)
