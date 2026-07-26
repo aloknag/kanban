@@ -23,6 +23,7 @@ import { getTask, getEpic, TaskDetail as TaskDetailType } from '../lib/api'
 export function TaskDetail() {
   const { id } = useParams<{ id: string }>()
   const taskId = id ? parseInt(id, 10) : null
+  const isInvalidId = typeof taskId === 'number' && Number.isNaN(taskId)
   const [showLoading, setShowLoading] = useState(false)
 
   const {
@@ -60,7 +61,7 @@ export function TaskDetail() {
 
   // Determine error state: 404 vs other errors
   // Check error message format: "API error: 404 Not Found"
-  const isNotFound = error instanceof Error && error.message.includes('404')
+  const isNotFound = isInvalidId || (error instanceof Error && error.message.includes('404'))
   const hasError = error && !isNotFound
 
   const shouldShowLoading = showLoading

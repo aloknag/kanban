@@ -167,3 +167,13 @@ Avoid: Treat Docker Compose as the only valid acceptance environment; any API co
 **Who/where:** `app/main.py` — `update_column()` wrote `body["name"]` directly with no validation.
 **Where it should have been caught:** Any test exercising PATCH with an empty/whitespace name — the existing PATCH test only covered a valid rename.
 **What to avoid:** When two handlers validate the same field (create vs. update), a change to one's validation should prompt checking the other. This is the third bug in this round (#61, and the column_id gaps in #62) that comes from `update_*`/`create_*` pairs validating a field inconsistently.
+
+---
+
+### Bug #54 — Non-numeric task/epic ID renders a blank broken page instead of not-found
+
+**Bug ID:** #54
+**Why introduced:** `TaskDetail.tsx`/`EpicDetail.tsx` compute `id ? parseInt(id, 10) : null` and gate the react-query fetch with `enabled: !!taskId`. Nobody accounted for `parseInt` returning `NaN` on a non-numeric id — `!!NaN` is `false`, so the query silently never runs instead of erroring, and the fallback render branch (not loading, not not-found) rendered a blank `DetailHeader` shell.
+**Who/where:** `frontend/src/routes/TaskDetail.tsx` and `frontend/src/routes/EpicDetail.tsx` — `isNotFound` was derived only from a 404 API error, with no case for an id that never produced a request at all.
+**Where it should have been caught:** A test with a non-numeric route param (`/tasks/abc`), not just the numeric-but-nonexistent case (`/tasks/-1`) that was already covered.
+**What to avoid:** When gating a query on `!!parsedValue`, remember `parseInt` failure produces `NaN`, which is falsy but not `null`/`undefined` — treat "failed to parse" as its own explicit state rather than lumping it in with "still loading."
