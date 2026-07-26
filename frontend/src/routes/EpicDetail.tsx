@@ -22,6 +22,7 @@ import { getEpic, EpicDetail as EpicDetailType } from '../lib/api'
 export function EpicDetail() {
   const { id } = useParams<{ id: string }>()
   const epicId = id ? parseInt(id, 10) : null
+  const isInvalidId = typeof epicId === 'number' && Number.isNaN(epicId)
   const [showLoading, setShowLoading] = useState(false)
 
   const {
@@ -30,8 +31,11 @@ export function EpicDetail() {
     error,
   } = useQuery({
     queryKey: ['epic', epicId],
-    queryFn: () => (epicId ? getEpic(epicId) : Promise.reject(new Error('Invalid epic ID'))),
-    enabled: !!epicId,
+    queryFn: () =>
+      epicId !== null && !Number.isNaN(epicId)
+        ? getEpic(epicId)
+        : Promise.reject(new Error('Invalid epic ID')),
+    enabled: epicId !== null && !Number.isNaN(epicId),
     retry: false,
   })
 
@@ -51,7 +55,7 @@ export function EpicDetail() {
 
   // Determine error state: 404 vs other errors
   // Check error message format: "API error: 404 Not Found"
-  const isNotFound = error instanceof Error && error.message.includes('404')
+  const isNotFound = isInvalidId || (error instanceof Error && error.message.includes('404'))
   const hasError = error && !isNotFound
 
   const shouldShowLoading = showLoading

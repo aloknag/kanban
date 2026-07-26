@@ -23,6 +23,7 @@ import { getTask, getEpic, TaskDetail as TaskDetailType } from '../lib/api'
 export function TaskDetail() {
   const { id } = useParams<{ id: string }>()
   const taskId = id ? parseInt(id, 10) : null
+  const isInvalidId = typeof taskId === 'number' && Number.isNaN(taskId)
   const [showLoading, setShowLoading] = useState(false)
 
   const {
@@ -31,17 +32,26 @@ export function TaskDetail() {
     error,
   } = useQuery({
     queryKey: ['task', taskId],
-    queryFn: () => (taskId ? getTask(taskId) : Promise.reject(new Error('Invalid task ID'))),
-    enabled: !!taskId,
+    queryFn: () =>
+      taskId !== null && !Number.isNaN(taskId)
+        ? getTask(taskId)
+        : Promise.reject(new Error('Invalid task ID')),
+    enabled: taskId !== null && !Number.isNaN(taskId),
     retry: false,
   })
+
+  const parentEpicId = task?.epic_id ?? null
+  // Guard on an explicit null/NaN check, not truthiness — epic_id is a real
+  // id and 0 is falsy but valid (see #54 follow-up, commit 05260e3).
+  const hasParentEpicId = parentEpicId !== null && !Number.isNaN(parentEpicId)
 
   const {
     data: parentEpic,
   } = useQuery({
-    queryKey: ['epic', task?.epic_id],
-    queryFn: () => (task?.epic_id ? getEpic(task.epic_id) : Promise.resolve(undefined)),
-    enabled: !!task?.epic_id,
+    queryKey: ['epic', parentEpicId],
+    queryFn: () =>
+      hasParentEpicId ? getEpic(parentEpicId as number) : Promise.resolve(undefined),
+    enabled: hasParentEpicId,
   })
 
   // 80ms debounce: only show loading state if still loading after 80ms
@@ -60,7 +70,7 @@ export function TaskDetail() {
 
   // Determine error state: 404 vs other errors
   // Check error message format: "API error: 404 Not Found"
-  const isNotFound = error instanceof Error && error.message.includes('404')
+  const isNotFound = isInvalidId || (error instanceof Error && error.message.includes('404'))
   const hasError = error && !isNotFound
 
   const shouldShowLoading = showLoading

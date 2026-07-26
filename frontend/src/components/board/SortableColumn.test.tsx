@@ -71,6 +71,15 @@ describe('SortableColumn', () => {
     expect(screen.getByText('2 specimens')).toBeInTheDocument()
   })
 
+  it('does not render a vestigial bottom separator rule (#51)', () => {
+    const { container } = renderWithDnd(
+      <SortableColumn column={mockColumn} tasks={mockTasks} />
+    )
+
+    const rule = container.querySelector('.border-b.border-ink3')
+    expect(rule).not.toBeInTheDocument()
+  })
+
   it('renders all tasks when not collapsed', () => {
     renderWithDnd(
       <SortableColumn
@@ -124,7 +133,7 @@ describe('SortableColumn', () => {
 
     // Get the collapse button (not the header which is also a button via DnD)
     const buttons = screen.getAllByRole('button')
-    const collapseButton = buttons.find(btn => btn.textContent === '▾')
+    const collapseButton = buttons.find(btn => btn.textContent === '[ ▾ collapse ]')
     expect(collapseButton).toBeInTheDocument()
     collapseButton?.click()
     expect(onToggle).toHaveBeenCalledTimes(1)

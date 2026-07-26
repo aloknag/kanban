@@ -167,3 +167,43 @@ Avoid: Treat Docker Compose as the only valid acceptance environment; any API co
 **Who/where:** `app/main.py` — `update_column()` wrote `body["name"]` directly with no validation.
 **Where it should have been caught:** Any test exercising PATCH with an empty/whitespace name — the existing PATCH test only covered a valid rename.
 **What to avoid:** When two handlers validate the same field (create vs. update), a change to one's validation should prompt checking the other. This is the third bug in this round (#61, and the column_id gaps in #62) that comes from `update_*`/`create_*` pairs validating a field inconsistently.
+
+---
+
+### Bug #54 — Non-numeric task/epic ID renders a blank broken page instead of not-found
+
+**Bug ID:** #54
+**Why introduced:** `TaskDetail.tsx`/`EpicDetail.tsx` compute `id ? parseInt(id, 10) : null` and gate the react-query fetch with `enabled: !!taskId`. Nobody accounted for `parseInt` returning `NaN` on a non-numeric id — `!!NaN` is `false`, so the query silently never runs instead of erroring, and the fallback render branch (not loading, not not-found) rendered a blank `DetailHeader` shell.
+**Who/where:** `frontend/src/routes/TaskDetail.tsx` and `frontend/src/routes/EpicDetail.tsx` — `isNotFound` was derived only from a 404 API error, with no case for an id that never produced a request at all.
+**Where it should have been caught:** A test with a non-numeric route param (`/tasks/abc`), not just the numeric-but-nonexistent case (`/tasks/-1`) that was already covered.
+**What to avoid:** When gating a query on `!!parsedValue`, remember `parseInt` failure produces `NaN`, which is falsy but not `null`/`undefined` — treat "failed to parse" as its own explicit state rather than lumping it in with "still loading."
+
+---
+
+### Bug #51 — Column drop-zone divider lines render at different vertical positions across columns
+
+**Bug ID:** #51
+**Why introduced:** The board's layout was rewritten from side-by-side flex columns to a vertical single-column stack of sections (commit 4f5976f, "field journal pattern") about 15 minutes after this issue was filed against the previous layout. The pre-existing decorative bottom-separator `<div>` in each column was never revisited for the new layout, so it kept rendering unconditionally — but a shared "baseline" across columns is meaningless once columns are stacked vertically instead of side by side.
+**Who/where:** `frontend/src/components/board/SortableColumn.tsx` (the component actually rendered by `Board.tsx`) — the vestigial `<div className="mt-gutter border-b border-ink3" aria-hidden="true" />` "Bottom separator rule". (`Column.tsx` has the same vestigial divider but is dead code — not imported by any route.)
+**Where it should have been caught:** The vertical-stack layout rewrite (4f5976f) should have re-examined every element whose purpose depended on the old side-by-side grid, not just the container's flex/grid classes.
+**What to avoid:** When a layout architecture changes fundamentally (grid → document flow), grep for decorative/structural elements tied to the old model (dividers, baselines, fixed heights) rather than assuming child components are layout-agnostic.
+
+---
+
+### Bug #50 — Done column collapses on every page load, expand toggle is inert
+
+**Bug ID:** #50
+**Why introduced:** The "default Done to collapsed" useEffect included `collapsedColumns` in its dependency array so it would "properly re-check" the collapsed state (per its own inline comment intent), but its body unconditionally re-adds Done to the collapsed set whenever Done isn't in it — with no way to tell "never collapsed yet" apart from "user just expanded it." Since expanding Done changes `collapsedColumns`, that change re-triggers the very same effect, which immediately reverts the expand.
+**Who/where:** `frontend/src/routes/Board.tsx` — the `useEffect` at (was) lines 214-222, and its own regression test in `Board.test.tsx` ("ensures Done column has collapsedColumns in useEffect dependency array") which asserted the presence of the dependency itself rather than the actual expand-and-stay-expanded behavior, so it passed despite locking in the bug.
+**Where it should have been caught:** A test that clicks the expand toggle and asserts the column stays expanded after another render/effect cycle — not just a test that the component renders and has interactive buttons.
+**What to avoid:** A "run once to set a default" effect must not depend on the very state it conditionally mutates while checking "is it already at the default" — that pattern creates a reinforcing loop that fights any state change away from the default. Guard one-time initialization with a ref, not a dependency on the value being initialized. Also: a test named after an implementation detail (a dependency array) is a sign the test is validating the mechanism, not the behavior — assert what the user should observe instead.
+
+---
+
+### Bug #54 (follow-up) — id=0 hit the same blank-shell symptom via the original #54 fix's own guard
+
+**Bug ID:** #54 (review-round follow-up, commit 05260e3)
+**Why introduced:** The original #54 fix (commit 8d2a9a0) replaced the blank-shell symptom for non-numeric ids by adding an explicit `isInvalidId` check, but left `enabled: !!taskId`/`!!epicId` and the queryFn's `taskId ? getTask(taskId) : ...` guard untouched. `!!0 === false`, so a route param that parses to the numeric id `0` disabled the query and hit the exact same blank shell the fix was meant to close — the fix addressed the `NaN` case but reintroduced the same falsy-zero gap the rest of the file already had.
+**Who/where:** `frontend/src/routes/TaskDetail.tsx` and `frontend/src/routes/EpicDetail.tsx` — the `enabled` flag and `queryFn` guard on the primary task/epic query, both still gated on `!!taskId`/`!!epicId` rather than an explicit null/NaN check.
+**Where it should have been caught:** Code review on the original #54 PR — once one falsy-zero gap is found and fixed via an explicit `Number.isNaN` check, every other truthiness check on the same variable in the same file should be audited for the identical gap, not just the one the bug report happened to describe.
+**What to avoid:** `0` is a legitimate id (SQLite autoincrement starts at 1 in this app, but nothing enforces that at the type level) and is falsy in JS — any `!!id` / `if (id)` guard on a value that can legitimately be `0` is a latent bug. Prefer an explicit `id !== null && !Number.isNaN(id)` check anywhere an id is used as a boolean gate, and grep for every other truthiness check on the same variable once one such bug is found in a file.

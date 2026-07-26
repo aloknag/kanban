@@ -5,8 +5,12 @@
 .pytest_cache
 .pi
 node_modules
+**/node_modules
 dist
 build
+evidences
+test-results
+playwright-report
 *.pyc
 __pycache__
 *.egg-info

@@ -15,7 +15,7 @@
  * - PATCH /api/columns/reorder on drop
  */
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router'
 import {
@@ -211,15 +211,26 @@ export function Board() {
     return () => clearInterval(interval)
   }, [tasks])
 
-  // Ensure Done column is in collapsed set on initial load
+  // Default Done to collapsed on a fresh session only (no stored preference).
+  // Runs once — must NOT depend on collapsedColumns, or toggling Done open
+  // (which changes collapsedColumns) re-triggers this effect and immediately
+  // stomps the user's expand action back to collapsed.
+  const hasAppliedDoneDefault = useRef(false)
   useEffect(() => {
-    if (columns.length > 0) {
-      const doneColumn = columns.find(c => c.name === 'Done')
-      if (doneColumn && !collapsedColumns.has(doneColumn.id)) {
-        setCollapsedColumns(prev => new Set([...prev, doneColumn.id]))
-      }
+    if (hasAppliedDoneDefault.current || columns.length === 0) {
+      return
     }
-  }, [columns, collapsedColumns])
+    hasAppliedDoneDefault.current = true
+
+    if (localStorage.getItem('collapsed_columns') !== null) {
+      return
+    }
+
+    const doneColumn = columns.find(c => c.name === 'Done')
+    if (doneColumn) {
+      setCollapsedColumns(prev => new Set([...prev, doneColumn.id]))
+    }
+  }, [columns])
 
   // Sort columns: Done forced to bottom
   const sortedColumns = [

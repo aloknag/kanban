@@ -168,4 +168,19 @@ describe('TaskDetail route error handling and loading state', () => {
       })
     })
   })
+
+  describe('parent epic id 0 edge case', () => {
+    it('fetches the parent epic when epic_id is 0 (falsy but valid)', async () => {
+      const taskWithZeroEpic = { ...mockTask, epic_id: 0 }
+      const zeroEpic = { ...mockEpic, id: 0 }
+      vi.mocked(api.getTask).mockResolvedValue(taskWithZeroEpic)
+      vi.mocked(api.getEpic).mockResolvedValue(zeroEpic)
+
+      renderWithProviders()
+
+      await waitFor(() => {
+        expect(api.getEpic).toHaveBeenCalledWith(0)
+      })
+    })
+  })
 })

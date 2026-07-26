@@ -105,12 +105,6 @@ export function SortableColumn({
             ))}
           </div>
         )}
-
-        {/* Bottom separator rule */}
-        <div
-          className="mt-gutter border-b border-ink3"
-          aria-hidden="true"
-        />
       </div>
     </section>
   )
