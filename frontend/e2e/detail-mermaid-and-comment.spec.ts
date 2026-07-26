@@ -2,28 +2,31 @@ import { test, expect } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 test.describe('Detail: Mermaid renders Fig. 1, comment posts within 5s', () => {
   const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
-  // Use the correct system temp directory
-  const DATA_DIR = process.env.DATA_DIR || path.join(os.tmpdir(), 'e2e-data');
+  const BACKEND_CONTAINER = process.env.BACKEND_CONTAINER || 'kanban-backend';
   const FIXTURES_DIR = path.join(__dirname, 'fixtures');
 
-  test.beforeEach(async ({ page }) => {
-    // Create the data directory if it doesn't exist
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+  // The backend under test runs in Docker Compose (docs/e2e-testing.md), whose
+  // DATA_DIR is a named Docker volume — not a host-bind-mounted directory. A
+  // file written to a local DATA_DIR path is invisible to that container, so
+  // content_path fixtures must be copied directly into the container instead.
+  function writeContainerFile(contentPath: string, content: string) {
+    const tmpFile = path.join(os.tmpdir(), `e2e-upload-${Date.now()}-${path.basename(contentPath)}`);
+    fs.writeFileSync(tmpFile, content);
+    try {
+      const containerDir = path.posix.dirname(`/data/${contentPath}`);
+      execFileSync('docker', ['exec', BACKEND_CONTAINER, 'mkdir', '-p', containerDir]);
+      execFileSync('docker', ['cp', tmpFile, `${BACKEND_CONTAINER}:/data/${contentPath}`]);
+    } finally {
+      fs.unlinkSync(tmpFile);
     }
-
-    // Create the tasks subdirectory
-    const tasksDir = path.join(DATA_DIR, 'tasks');
-    if (!fs.existsSync(tasksDir)) {
-      fs.mkdirSync(tasksDir, { recursive: true });
-    }
-  });
+  }
 
   test('should render mermaid diagram with Fig. 1 caption and accept comment within 5s', async ({
     page,
@@ -32,17 +35,10 @@ test.describe('Detail: Mermaid renders Fig. 1, comment posts within 5s', () => {
     const taskTitle = 'E2E Mermaid and Comment Test';
     const contentPath = 'tasks/e2e-mermaid.md';
 
-    // Step 1: Ensure the Markdown file with mermaid block exists in the data folder
-    const mermaidFilePath = path.join(DATA_DIR, contentPath);
-    const mermaidDir = path.dirname(mermaidFilePath);
-    if (!fs.existsSync(mermaidDir)) {
-      fs.mkdirSync(mermaidDir, { recursive: true });
-    }
-
-    // Read the mermaid fixture and write it to the data folder
+    // Step 1: Ensure the Markdown file with mermaid block exists in the backend's data folder
     const fixturePath = path.join(FIXTURES_DIR, 'mermaid.md');
     const fixtureContent = fs.readFileSync(fixturePath, 'utf-8');
-    fs.writeFileSync(mermaidFilePath, fixtureContent);
+    writeContainerFile(contentPath, fixtureContent);
 
     // Step 2: POST a new task to the API
     const createResponse = await request.post(`${BACKEND_URL}/api/tasks`, {
