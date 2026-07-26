@@ -51,6 +51,37 @@ async def test_get_tasks_filters_by_column_id():
 
 
 @pytest.mark.asyncio
+async def test_get_tasks_includes_updated_at():
+    """GET /api/tasks includes created_at/updated_at so the frontend can compute
+    the "recently updated" (data-new) indicator without an extra per-task fetch."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        data_folder = Path(tmpdir)
+        await init_database(data_folder)
+
+        tasks_dir = data_folder / "tasks"
+        tasks_dir.mkdir()
+        (tasks_dir / "test.md").write_text("# Test\n")
+
+        app = create_app(data_folder)
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            await client.post(
+                "/api/tasks",
+                json={
+                    "title": "Task with timestamps",
+                    "content_path": "tasks/test.md",
+                    "column_id": 1,
+                }
+            )
+
+            response = await client.get("/api/tasks")
+            assert response.status_code == 200
+            tasks = response.json()
+            assert len(tasks) == 1
+            assert tasks[0]["created_at"]
+            assert tasks[0]["updated_at"]
+
+
+@pytest.mark.asyncio
 async def test_get_tasks_oversized_column_id_returns_empty():
     """GET /api/tasks?column_id=N with an oversized value returns [], not a 500 (Copilot review, PR #1)."""
     with tempfile.TemporaryDirectory() as tmpdir:
