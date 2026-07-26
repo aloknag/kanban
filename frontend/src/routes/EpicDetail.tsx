@@ -31,8 +31,11 @@ export function EpicDetail() {
     error,
   } = useQuery({
     queryKey: ['epic', epicId],
-    queryFn: () => (epicId ? getEpic(epicId) : Promise.reject(new Error('Invalid epic ID'))),
-    enabled: !!epicId,
+    queryFn: () =>
+      epicId !== null && !Number.isNaN(epicId)
+        ? getEpic(epicId)
+        : Promise.reject(new Error('Invalid epic ID')),
+    enabled: epicId !== null && !Number.isNaN(epicId),
     retry: false,
   })
 

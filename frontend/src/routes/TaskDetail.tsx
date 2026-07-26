@@ -32,8 +32,11 @@ export function TaskDetail() {
     error,
   } = useQuery({
     queryKey: ['task', taskId],
-    queryFn: () => (taskId ? getTask(taskId) : Promise.reject(new Error('Invalid task ID'))),
-    enabled: !!taskId,
+    queryFn: () =>
+      taskId !== null && !Number.isNaN(taskId)
+        ? getTask(taskId)
+        : Promise.reject(new Error('Invalid task ID')),
+    enabled: taskId !== null && !Number.isNaN(taskId),
     retry: false,
   })
 
