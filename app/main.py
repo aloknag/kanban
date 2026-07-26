@@ -204,12 +204,12 @@ def create_app(data_folder: Path) -> FastAPI:
         try:
             if column_id is not None:
                 cursor = await db.execute(
-                    "SELECT id, slug, title, content_path, assignee, column_id, epic_id FROM tasks WHERE column_id = ? ORDER BY created_at DESC",
+                    "SELECT id, slug, title, content_path, assignee, column_id, epic_id, created_at, updated_at FROM tasks WHERE column_id = ? ORDER BY created_at DESC",
                     (column_id,)
                 )
             else:
                 cursor = await db.execute(
-                    "SELECT id, slug, title, content_path, assignee, column_id, epic_id FROM tasks ORDER BY created_at DESC"
+                    "SELECT id, slug, title, content_path, assignee, column_id, epic_id, created_at, updated_at FROM tasks ORDER BY created_at DESC"
                 )
             rows = await cursor.fetchall()
             result = []
@@ -223,6 +223,8 @@ def create_app(data_folder: Path) -> FastAPI:
                     "column_id": row[5],
                     "epic_id": row[6],
                     "excerpt": excerpt,
+                    "created_at": row[7],
+                    "updated_at": row[8],
                 })
             return result
         finally:

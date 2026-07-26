@@ -53,6 +53,7 @@ export function ColumnHeader({
 }: Props) {
   return (
     <header
+      data-testid="column-header"
       className={`flex items-baseline justify-between gap-card mb-gutter ${
         isDraggable ? 'cursor-grab' : ''
       }`}

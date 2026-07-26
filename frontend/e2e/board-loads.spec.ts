@@ -41,9 +41,11 @@ test.describe('Board loads correctly', () => {
     )
     expect(corsError, `CORS blocked API calls: ${corsError}`).toBeUndefined()
 
-    // Board columns are visible
-    await expect(page.getByText('TODO')).toBeVisible({ timeout: 10_000 })
-    await expect(page.getByText('IN PROGRESS')).toBeVisible()
-    await expect(page.getByText('DONE')).toBeVisible()
+    // Board columns are visible. Scoped to column-header headings (not getByText)
+    // because task titles in the Done column (e.g. leftover "Done Task" test data)
+    // can also match a loose text search for "DONE".
+    await expect(page.getByRole('heading', { name: 'TODO' })).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByRole('heading', { name: 'IN PROGRESS' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'DONE' })).toBeVisible()
   })
 })

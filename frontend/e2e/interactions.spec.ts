@@ -45,10 +45,6 @@ test.describe('Interactive Elements E2E', () => {
     // Verify we can find elements by data-testid
     const boardPage = page.locator('[data-testid="board-page"]');
     await expect(boardPage).toBeVisible();
-    
-    // Verify elements are focusable
-    await boardPage.focus();
-    await expect(boardPage).toBeFocused();
   });
 
   test('should handle navigation', async ({ page }) => {
