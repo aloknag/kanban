@@ -25,6 +25,11 @@ describe('ColumnHeader', () => {
     expect(screen.getByText('1 specimen')).toBeInTheDocument()
   })
 
+  it('exposes data-testid="column-header" for e2e targeting', () => {
+    const { container } = render(<ColumnHeader column={mockColumn} taskCount={3} />)
+    expect(container.querySelector('[data-testid="column-header"]')).toBeInTheDocument()
+  })
+
   it('displays em-dash separator', () => {
     const { container } = render(
       <ColumnHeader column={mockColumn} taskCount={2} />
