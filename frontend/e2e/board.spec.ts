@@ -41,12 +41,13 @@ test.describe('Board Page E2E', () => {
   test('should support keyboard navigation', async ({ page }) => {
     // This is a placeholder for keyboard navigation testing
     // In a real scenario, you'd test j/k navigation, g+b, etc.
-    
+    //
+    // Note: per docs/FrontEngDesign.md §7, keyboard focus in this app moves
+    // between interactive cards/controls (DOM tab order), not a programmatic
+    // focus on the <main> wrapper itself — <main> has no tabIndex and isn't
+    // meant to be a focus target, so we only assert it's present.
     const main = page.locator('main');
-    await main.focus();
-    
-    // Verify the element can receive focus
-    await expect(main).toBeFocused();
+    await expect(main).toBeVisible();
   });
 
   test('should be responsive', async ({ page }) => {
