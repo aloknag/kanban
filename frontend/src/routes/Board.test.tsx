@@ -480,38 +480,49 @@ describe('Board', () => {
   })
 
   describe('Done column collapse initialization', () => {
-    it('ensures Done column has collapsedColumns in useEffect dependency array', async () => {
-      // Critical issue: useEffect at line 136-143 checks collapsedColumns.has()
-      // but doesn't include collapsedColumns in its dependency array.
-      // This causes a stale closure: the effect reads the old collapsedColumns value.
-      //
-      // The bug: if collapsedColumns changes, the effect doesn't re-run to verify
-      // Done is still in the set. This could leave it in an inconsistent state.
-      //
-      // The fix: add collapsedColumns to the dependency array
-      // so effect re-runs when either columns or collapsedColumns changes.
+    beforeEach(() => {
+      localStorage.clear()
+    })
 
+    it('defaults Done to collapsed on a fresh session (no stored preference)', async () => {
       vi.mocked(api.getColumns).mockResolvedValue(mockColumns)
       vi.mocked(api.getTasks).mockResolvedValue(mockTasks)
 
       renderWithProviders(<Board />)
 
       await waitFor(() => {
-        expect(screen.getByText('DONE')).toBeInTheDocument()
+        expect(
+          screen.getByRole('button', { name: 'Expand Done column' })
+        ).toBeInTheDocument()
       })
+    })
 
-      // If the dependency array includes collapsedColumns, the component
-      // will properly initialize Done as collapsed and keep it that way
-      // if collapsedColumns changes.
+    it('keeps Done expanded after the user toggles it open (#50)', async () => {
+      // Bug #50: the useEffect that defaults Done to collapsed depended on
+      // collapsedColumns itself, so removing Done from the set (expanding it)
+      // re-triggered the effect, which immediately put Done back in the
+      // collapsed set — the expand toggle was stomped on the very next render.
+      vi.mocked(api.getColumns).mockResolvedValue(mockColumns)
+      vi.mocked(api.getTasks).mockResolvedValue(mockTasks)
 
-      // Verify Done column renders (which means the component mounted successfully)
-      const doneHeader = screen.getByText('DONE')
-      expect(doneHeader).toBeInTheDocument()
+      renderWithProviders(<Board />)
 
-      // Verify the closure is not stale by checking the component is interactive
-      // If there was a stale closure bug, the Done column might not behave correctly
-      const buttons = screen.getAllByRole('button')
-      expect(buttons.length).toBeGreaterThan(0)
+      const expandButton = await screen.findByRole('button', {
+        name: 'Expand Done column',
+      })
+      expandButton.click()
+
+      // Should flip to expanded and STAY expanded — not get silently
+      // re-collapsed by the default-collapse effect re-firing.
+      await screen.findByRole('button', { name: 'Collapse Done column' })
+
+      // Give any stray effect re-run a chance to fire before asserting
+      // the expanded state has stuck.
+      await new Promise(resolve => setTimeout(resolve, 50))
+
+      expect(
+        screen.getByRole('button', { name: 'Collapse Done column' })
+      ).toBeInTheDocument()
     })
   })
 

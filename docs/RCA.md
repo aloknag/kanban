@@ -187,3 +187,13 @@ Avoid: Treat Docker Compose as the only valid acceptance environment; any API co
 **Who/where:** `frontend/src/components/board/SortableColumn.tsx` (the component actually rendered by `Board.tsx`) — the vestigial `<div className="mt-gutter border-b border-ink3" aria-hidden="true" />` "Bottom separator rule". (`Column.tsx` has the same vestigial divider but is dead code — not imported by any route.)
 **Where it should have been caught:** The vertical-stack layout rewrite (4f5976f) should have re-examined every element whose purpose depended on the old side-by-side grid, not just the container's flex/grid classes.
 **What to avoid:** When a layout architecture changes fundamentally (grid → document flow), grep for decorative/structural elements tied to the old model (dividers, baselines, fixed heights) rather than assuming child components are layout-agnostic.
+
+---
+
+### Bug #50 — Done column collapses on every page load, expand toggle is inert
+
+**Bug ID:** #50
+**Why introduced:** The "default Done to collapsed" useEffect included `collapsedColumns` in its dependency array so it would "properly re-check" the collapsed state (per its own inline comment intent), but its body unconditionally re-adds Done to the collapsed set whenever Done isn't in it — with no way to tell "never collapsed yet" apart from "user just expanded it." Since expanding Done changes `collapsedColumns`, that change re-triggers the very same effect, which immediately reverts the expand.
+**Who/where:** `frontend/src/routes/Board.tsx` — the `useEffect` at (was) lines 214-222, and its own regression test in `Board.test.tsx` ("ensures Done column has collapsedColumns in useEffect dependency array") which asserted the presence of the dependency itself rather than the actual expand-and-stay-expanded behavior, so it passed despite locking in the bug.
+**Where it should have been caught:** A test that clicks the expand toggle and asserts the column stays expanded after another render/effect cycle — not just a test that the component renders and has interactive buttons.
+**What to avoid:** A "run once to set a default" effect must not depend on the very state it conditionally mutates while checking "is it already at the default" — that pattern creates a reinforcing loop that fights any state change away from the default. Guard one-time initialization with a ref, not a dependency on the value being initialized. Also: a test named after an implementation detail (a dependency array) is a sign the test is validating the mechanism, not the behavior — assert what the user should observe instead.
