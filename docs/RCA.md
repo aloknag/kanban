@@ -177,3 +177,13 @@ Avoid: Treat Docker Compose as the only valid acceptance environment; any API co
 **Who/where:** `frontend/src/routes/TaskDetail.tsx` and `frontend/src/routes/EpicDetail.tsx` — `isNotFound` was derived only from a 404 API error, with no case for an id that never produced a request at all.
 **Where it should have been caught:** A test with a non-numeric route param (`/tasks/abc`), not just the numeric-but-nonexistent case (`/tasks/-1`) that was already covered.
 **What to avoid:** When gating a query on `!!parsedValue`, remember `parseInt` failure produces `NaN`, which is falsy but not `null`/`undefined` — treat "failed to parse" as its own explicit state rather than lumping it in with "still loading."
+
+---
+
+### Bug #51 — Column drop-zone divider lines render at different vertical positions across columns
+
+**Bug ID:** #51
+**Why introduced:** The board's layout was rewritten from side-by-side flex columns to a vertical single-column stack of sections (commit 4f5976f, "field journal pattern") about 15 minutes after this issue was filed against the previous layout. The pre-existing decorative bottom-separator `<div>` in each column was never revisited for the new layout, so it kept rendering unconditionally — but a shared "baseline" across columns is meaningless once columns are stacked vertically instead of side by side.
+**Who/where:** `frontend/src/components/board/SortableColumn.tsx` (the component actually rendered by `Board.tsx`) — the vestigial `<div className="mt-gutter border-b border-ink3" aria-hidden="true" />` "Bottom separator rule". (`Column.tsx` has the same vestigial divider but is dead code — not imported by any route.)
+**Where it should have been caught:** The vertical-stack layout rewrite (4f5976f) should have re-examined every element whose purpose depended on the old side-by-side grid, not just the container's flex/grid classes.
+**What to avoid:** When a layout architecture changes fundamentally (grid → document flow), grep for decorative/structural elements tied to the old model (dividers, baselines, fixed heights) rather than assuming child components are layout-agnostic.
