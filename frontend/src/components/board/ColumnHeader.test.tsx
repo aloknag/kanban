@@ -50,7 +50,7 @@ describe('ColumnHeader', () => {
         onToggleCollapse={() => {}}
       />
     )
-    expect(screen.getByText('▾')).toBeInTheDocument()
+    expect(screen.getByText('[ ▾ collapse ]')).toBeInTheDocument()
   })
 
   it('calls onToggleCollapse when chevron is clicked', () => {
@@ -80,7 +80,8 @@ describe('ColumnHeader', () => {
       />
     )
     const button = container.querySelector('button')
-    expect(button).toHaveClass('opacity-50')
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+    expect(button).toHaveTextContent('[ ▸ expand ]')
   })
 })
 
