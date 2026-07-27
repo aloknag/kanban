@@ -1,12 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { useIsFetching } from '@tanstack/react-query'
+import { useIsFetching, useQueryClient } from '@tanstack/react-query'
 import { PollIndicator } from './PollIndicator'
 
 // Mock TanStack Query
 vi.mock('@tanstack/react-query', () => ({
   useIsFetching: vi.fn(),
+  useQueryClient: vi.fn(),
 }))
+
+function mockQueryClientWithData(data: unknown) {
+  const mockGetQueryData = vi.fn().mockReturnValue(data)
+  vi.mocked(useQueryClient).mockReturnValue({
+    getQueryData: mockGetQueryData,
+  } as any)
+  return mockGetQueryData
+}
 
 // Mock matchMedia for reduced-motion tests
 Object.defineProperty(window, 'matchMedia', {
@@ -26,67 +35,80 @@ Object.defineProperty(window, 'matchMedia', {
 describe('PollIndicator', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Default: unchanging data, so tests that don't care about the pulse
+    // condition don't accidentally trigger it.
+    mockQueryClientWithData([{ id: 1, updated_at: '2026-01-01T00:00:00Z' }])
   })
 
-  it('subscribes to useIsFetching and detects 1 → 0 transition', () => {
+  it('subscribes to useIsFetching and useQueryClient for the tasks query', () => {
     const mockUseIsFetching = vi.mocked(useIsFetching)
-
-    // Initial: not fetching
     mockUseIsFetching.mockReturnValue(0)
 
-    const { rerender } = render(<PollIndicator glyphRef={{ current: document.createElement('span') }} />)
+    render(<PollIndicator glyphRef={{ current: document.createElement('span') }} />)
     expect(mockUseIsFetching).toHaveBeenCalledWith({ queryKey: ['tasks'] })
-
-    // Transition to fetching
-    mockUseIsFetching.mockReturnValue(1)
-    rerender(<PollIndicator glyphRef={({ current: document.createElement('span') } as any)} />)
-
-    // Transition back to not fetching (1 → 0) should trigger pulse
-    mockUseIsFetching.mockReturnValue(0)
-    rerender(<PollIndicator glyphRef={({ current: document.createElement('span') } as any)} />)
-
-    // Component renders without error when transition detected
-    expect(screen.getByRole('generic')).toBeInTheDocument()
+    expect(vi.mocked(useQueryClient)).toHaveBeenCalled()
   })
 
-  it('applies pulse class to glyph element on fetch transition', () => {
+  it('pulses when a poll cycle returns changed data', () => {
     const mockUseIsFetching = vi.mocked(useIsFetching)
     const glyphElement = document.createElement('span')
-    glyphElement.id = 'poll-glyph'
 
+    // Baseline fetch resolves with initial data
+    mockQueryClientWithData([{ id: 1, updated_at: '2026-01-01T00:00:00Z' }])
     mockUseIsFetching.mockReturnValue(0)
-
     const { rerender } = render(
       <PollIndicator glyphRef={({ current: glyphElement } as any)} />
     )
 
-    // Simulate fetch transition 1 → 0 with new data
+    // Poll cycle begins
     mockUseIsFetching.mockReturnValue(1)
     rerender(<PollIndicator glyphRef={({ current: glyphElement } as any)} />)
 
+    // Poll cycle completes with DIFFERENT data
+    mockQueryClientWithData([{ id: 1, updated_at: '2026-01-01T00:05:00Z' }])
     mockUseIsFetching.mockReturnValue(0)
     rerender(<PollIndicator glyphRef={({ current: glyphElement } as any)} />)
 
-    // The glyph should have received the pulse class
-    // (class is removed after 80ms, so we just verify the component handles it)
-    expect(PollIndicator).toBeDefined()
+    expect(glyphElement.classList.contains('animate-poll-pulse')).toBe(true)
   })
 
-  it('only triggers pulse when poll returns with new data', () => {
+  it('does not pulse when a poll cycle returns unchanged data', () => {
     const mockUseIsFetching = vi.mocked(useIsFetching)
-    mockUseIsFetching.mockReturnValue(0)
-
     const glyphElement = document.createElement('span')
+    const unchangedData = [{ id: 1, updated_at: '2026-01-01T00:00:00Z' }]
+
+    mockQueryClientWithData(unchangedData)
+    mockUseIsFetching.mockReturnValue(0)
     const { rerender } = render(
       <PollIndicator glyphRef={({ current: glyphElement } as any)} />
     )
 
-    // Just going back to 0 without having been to 1 should not trigger
+    mockUseIsFetching.mockReturnValue(1)
+    rerender(<PollIndicator glyphRef={({ current: glyphElement } as any)} />)
+
+    // Poll cycle completes with the SAME data (new array reference, same content)
+    mockQueryClientWithData([{ id: 1, updated_at: '2026-01-01T00:00:00Z' }])
     mockUseIsFetching.mockReturnValue(0)
     rerender(<PollIndicator glyphRef={({ current: glyphElement } as any)} />)
 
-    // No error = success
-    expect(screen.getByRole('generic')).toBeInTheDocument()
+    expect(glyphElement.classList.contains('animate-poll-pulse')).toBe(false)
+  })
+
+  it('does not pulse on the initial fetch (no prior data to compare against)', () => {
+    const mockUseIsFetching = vi.mocked(useIsFetching)
+    const glyphElement = document.createElement('span')
+
+    mockQueryClientWithData(undefined)
+    mockUseIsFetching.mockReturnValue(1)
+    const { rerender } = render(
+      <PollIndicator glyphRef={({ current: glyphElement } as any)} />
+    )
+
+    mockQueryClientWithData([{ id: 1, updated_at: '2026-01-01T00:00:00Z' }])
+    mockUseIsFetching.mockReturnValue(0)
+    rerender(<PollIndicator glyphRef={({ current: glyphElement } as any)} />)
+
+    expect(glyphElement.classList.contains('animate-poll-pulse')).toBe(false)
   })
 
   it('cleans up timer on unmount during active fade', () => {
@@ -96,16 +118,17 @@ describe('PollIndicator', () => {
       const glyphElement = document.createElement('span')
       const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout')
 
+      mockQueryClientWithData([{ id: 1, updated_at: '2026-01-01T00:00:00Z' }])
       mockUseIsFetching.mockReturnValue(0)
 
       const { rerender, unmount } = render(
         <PollIndicator glyphRef={({ current: glyphElement } as any)} />
       )
 
-      // Transition to fetching and back (triggers timer)
       mockUseIsFetching.mockReturnValue(1)
       rerender(<PollIndicator glyphRef={({ current: glyphElement } as any)} />)
 
+      mockQueryClientWithData([{ id: 1, updated_at: '2026-01-01T00:05:00Z' }])
       mockUseIsFetching.mockReturnValue(0)
       rerender(<PollIndicator glyphRef={({ current: glyphElement } as any)} />)
 
@@ -126,16 +149,17 @@ describe('PollIndicator', () => {
       const mockUseIsFetching = vi.mocked(useIsFetching)
       const glyphElement = document.createElement('span')
 
+      mockQueryClientWithData([{ id: 1, updated_at: '2026-01-01T00:00:00Z' }])
       mockUseIsFetching.mockReturnValue(0)
 
       const { rerender } = render(
         <PollIndicator glyphRef={({ current: glyphElement } as any)} />
       )
 
-      // Trigger pulse
       mockUseIsFetching.mockReturnValue(1)
       rerender(<PollIndicator glyphRef={({ current: glyphElement } as any)} />)
 
+      mockQueryClientWithData([{ id: 1, updated_at: '2026-01-01T00:05:00Z' }])
       mockUseIsFetching.mockReturnValue(0)
       rerender(<PollIndicator glyphRef={({ current: glyphElement } as any)} />)
 
@@ -165,6 +189,7 @@ describe('PollIndicator', () => {
     window.matchMedia = mockMatchMedia
 
     const mockUseIsFetching = vi.mocked(useIsFetching)
+    mockQueryClientWithData([{ id: 1, updated_at: '2026-01-01T00:00:00Z' }])
     mockUseIsFetching.mockReturnValue(0)
 
     const glyphElement = document.createElement('span')
@@ -172,7 +197,6 @@ describe('PollIndicator', () => {
       <PollIndicator glyphRef={({ current: glyphElement } as any)} />
     )
 
-    // Trigger pulse transition
     mockUseIsFetching.mockReturnValue(1)
     rerender(<PollIndicator glyphRef={({ current: glyphElement } as any)} />)
 

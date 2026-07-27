@@ -104,10 +104,15 @@ body { font-family: var(--f-body); font-feature-settings: 'ss01', 'cv11'; }
     color: black;
   }
 
-  /* Hide interactive UI chrome */
+  /* Hide interactive UI chrome.
+     Note: deliberately NOT [role="button"] — dnd-kit's useSortable()/
+     useDraggable() spread role="button" onto whole draggable surfaces
+     (column headers, task card wrappers) for keyboard-drag a11y, not just
+     small controls. Hiding that role would wipe out column titles and
+     every task card in print. Real chrome buttons are still covered by
+     the bare `button` selector below. */
   [data-print-hide],
   [role="banner"],
-  [role="button"],
   button {
     display: none !important;
   }

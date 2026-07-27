@@ -18,6 +18,28 @@ import { Column } from './api'
  * 1. Active is Done → reject (prevent Done from being dragged away)
  * 2. Over is Done → reject (prevent dropping onto Done)
  */
+/**
+ * Normalize a dnd-kit `over.id` to the underlying column id.
+ *
+ * SortableColumn.tsx registers the same <section> node under two dnd-kit
+ * ids simultaneously — useSortable({ id: column.id }) for reordering, and
+ * useDroppable({ id: `column-${column.id}` }) for task drops — so
+ * collision detection can hand back either form depending on which
+ * registration it resolves to. Callers that branch on `over.id` must
+ * normalize both shapes to the same id, or a drag can silently no-op.
+ */
+export function resolveDroppableColumnId(
+  overId: string | number | null | undefined
+): number | null {
+  if (overId === null || overId === undefined) return null
+
+  const str = String(overId)
+  const numericPart = str.startsWith('column-') ? str.slice('column-'.length) : str
+  const parsed = Number(numericPart)
+
+  return Number.isFinite(parsed) && numericPart !== '' ? parsed : null
+}
+
 export function shouldRejectDragEnd(
   activeId: string | number,
   overId: string | number | null | undefined,

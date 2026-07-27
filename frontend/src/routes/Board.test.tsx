@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { BrowserRouter } from 'react-router'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { Board } from './Board'
@@ -347,6 +347,29 @@ describe('Board', () => {
 
       expect(task1?.style.boxShadow).toContain('2px')
       expect(task2?.style.boxShadow).not.toContain('2px')
+    })
+  })
+
+  describe("'/' hotkey", () => {
+    beforeEach(() => {
+      vi.mocked(api.getColumns).mockResolvedValue(mockColumns)
+      vi.mocked(api.getTasks).mockResolvedValue(mockTasks)
+    })
+
+    it('focuses the catalog filter input and prevents "/" from being typed', async () => {
+      renderWithProviders(<Board />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('board-page')).toBeInTheDocument()
+      })
+
+      const filterInput = screen.getByTestId('filter-input') as HTMLInputElement
+      expect(filterInput).not.toHaveFocus()
+
+      fireEvent.keyDown(document, { key: '/' })
+
+      expect(filterInput).toHaveFocus()
+      expect(filterInput.value).toBe('')
     })
   })
 

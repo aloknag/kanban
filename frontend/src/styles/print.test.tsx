@@ -1,101 +1,75 @@
 /**
- * Print stylesheet integration tests
+ * Print stylesheet regression tests
  *
  * Per FrontEngDesign.md §13 #5:
  * - @media print renders the full board as a B&W report
  * - All collapsed sections (Done columns) expand for archival
  * - Output is suitable for A4 printing
- * - Removes interactive UI elements (buttons, etc.)
+ * - Removes interactive UI elements (buttons, etc.) WITHOUT hiding the
+ *   content those elements sit inside (e.g. a column header)
+ *
+ * These tests parse the *actual* index.css print rules (not hand-typed
+ * copies of the selectors) and check them against real rendered DOM,
+ * including elements dnd-kit decorates with `role="button"` — so a
+ * selector that's too broad (like a bare `[role="button"]`) gets caught
+ * here instead of only showing up in a print preview.
  */
 
 import { describe, it, expect } from 'vitest'
 import { render } from '@testing-library/react'
 import { BrowserRouter } from 'react-router'
+import { DndContext } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import postcss from 'postcss'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { Column } from '../components/board/Column'
 import { SortableColumn } from '../components/board/SortableColumn'
+import { SortableTaskCard } from '../components/board/SortableTaskCard'
 import { Column as ColumnType, Task } from '../lib/api'
 
-describe('Print stylesheet', () => {
-  it('should have correct CSS selectors for print hiding (role="banner")', () => {
-    // Verify print CSS targets role="banner" for TopRule
-    const div = document.createElement('div')
-    div.setAttribute('role', 'banner')
-    expect(div.getAttribute('role')).toBe('banner')
+/**
+ * Extract every selector from `display: none !important` rules inside
+ * @media print in the real stylesheet — these are the rules meant to hide
+ * interactive chrome when printing.
+ */
+const indexCssPath = path.resolve(process.cwd(), 'src/styles/index.css')
+const indexCss = readFileSync(indexCssPath, 'utf-8')
+
+function printHideSelectors(): string[] {
+  const root = postcss.parse(indexCss)
+  const selectors: string[] = []
+
+  root.walkAtRules('media', (atRule) => {
+    if (!atRule.params.includes('print')) return
+
+    atRule.walkRules((rule) => {
+      rule.walkDecls('display', (decl) => {
+        if (decl.value.trim() === 'none' && decl.important) {
+          selectors.push(...rule.selector.split(',').map((s) => s.trim()))
+        }
+      })
+    })
   })
 
-  it('should have correct CSS selectors for task cards (data-task-id)', () => {
-    // Verify print CSS targets article[data-task-id]
-    const article = document.createElement('article')
-    article.setAttribute('data-task-id', '101')
-    expect(article.getAttribute('data-task-id')).toBe('101')
-  })
+  return selectors
+}
 
-  it('should have correct CSS selectors for columns (data-column-id)', () => {
-    // Verify print CSS targets section[data-column-id]
-    const section = document.createElement('section')
-    section.setAttribute('data-column-id', '1')
-    expect(section.getAttribute('data-column-id')).toBe('1')
-  })
-
-  it('should have correct CSS selectors for collapsed content (data-collapsed)', () => {
-    // Verify print CSS targets section[data-collapsed]
-    const section = document.createElement('section')
-    section.setAttribute('data-collapsed', 'true')
-    expect(section.getAttribute('data-collapsed')).toBe('true')
-  })
-
-  it('should have CSS rules for Mermaid diagrams (data-mermaid)', () => {
-    // Verify print CSS targets figure[data-mermaid]
-    const figure = document.createElement('figure')
-    figure.setAttribute('data-mermaid', '')
-    figure.setAttribute('data-figure', '1')
-    expect(figure.getAttribute('data-mermaid')).toBe('')
-  })
-
-  it('should have CSS rules for gutter styling (data-gutter-rule)', () => {
-    // Verify print CSS targets div[data-gutter-rule]
-    const gutter = document.createElement('div')
-    gutter.setAttribute('data-gutter-rule', '')
-    expect(gutter.getAttribute('data-gutter-rule')).toBe('')
-  })
-
-  it('should hide buttons in print media', () => {
-    // Verify button selector will be hidden
-    const button = document.createElement('button')
-    expect(button.tagName).toBe('BUTTON')
-  })
-
-  it('should have board-content target for page-break rules', () => {
-    // Verify print CSS targets [data-testid="board-content"]
-    const div = document.createElement('div')
-    div.setAttribute('data-testid', 'board-content')
-    expect(div.getAttribute('data-testid')).toBe('board-content')
-  })
-
-  it('should verify print CSS structure is complete', () => {
-    // Verify all print-targeted attributes and roles are defined
-    const selectors = {
-      'role="banner"': { role: 'banner' },
-      'button': { tagName: 'BUTTON' },
-      'article[data-task-id]': { tagName: 'ARTICLE' },
-      'section[data-column-id]': { tagName: 'SECTION' },
-      'section[data-collapsed]': { 'data-collapsed': 'true' },
-      'figure[data-mermaid]': { 'data-mermaid': '' },
-      'div[data-gutter-rule]': { 'data-gutter-rule': '' },
-      '[data-testid="board-content"]': { 'data-testid': 'board-content' },
+function matchesAnyHideSelector(el: Element, selectors: string[]): string | undefined {
+  return selectors.find((selector) => {
+    try {
+      return el.matches(selector)
+    } catch {
+      return false
     }
-
-    expect(Object.keys(selectors).length).toBe(8)
   })
-})
+}
 
-describe('Print stylesheet — Integration with live DOM', () => {
-  const mockColumn: ColumnType = {
-    id: 1,
-    name: 'Todo',
-    position: 0,
-  }
+describe('Print stylesheet — hides chrome controls without hiding their containers', () => {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
+  const mockColumn: ColumnType = { id: 1, name: 'Todo', position: 0 }
   const mockTask: Task = {
     id: 101,
     slug: 'TASK-001',
@@ -107,114 +81,102 @@ describe('Print stylesheet — Integration with live DOM', () => {
     updated_at: '2026-05-01T12:00:00Z',
   }
 
-  it('CSS selector section[data-column-id] > div matches collapsed content wrapper in Column', () => {
-    const { container } = render(
+  const renderWithDnd = (component: React.ReactElement) =>
+    render(
       <BrowserRouter>
-        <Column
-          column={mockColumn}
-          tasks={[mockTask]}
-          isCollapsible={true}
-          isCollapsed={true}
-        />
+        <QueryClientProvider client={queryClient}>
+          <DndContext>
+            <SortableContext items={[mockColumn.id]} strategy={verticalListSortingStrategy}>
+              {component}
+            </SortableContext>
+          </DndContext>
+        </QueryClientProvider>
       </BrowserRouter>
     )
 
-    // Find the section with data-column-id
-    const section = container.querySelector('section[data-column-id]') as HTMLElement
-    expect(section).toBeInTheDocument()
-    expect(section?.getAttribute('data-column-id')).toBe('1')
+  it('the real collapse <button> is targeted by a print hide rule (positive control)', () => {
+    const { container } = renderWithDnd(
+      <SortableColumn
+        column={mockColumn}
+        tasks={[mockTask]}
+        isCollapsible={true}
+        isCollapsed={false}
+        onToggleCollapse={() => {}}
+      />
+    )
 
-    // Find the direct child div (the one with display: none when collapsed)
-    const directChildDiv = Array.from(section?.children || []).find(
-      (child) => child.tagName === 'DIV' && child !== section?.querySelector('header')?.parentElement
-    ) as HTMLElement
+    const collapseButton = container.querySelector('header button') as HTMLElement
+    expect(collapseButton).toBeInTheDocument()
 
-    expect(directChildDiv).toBeDefined()
-    expect(directChildDiv?.style.display).toBe('none')
-
-    // Verify the selector section[data-column-id] > div would match this element
-    const matchesSelector = section?.querySelector(':scope > div') === directChildDiv
-    expect(matchesSelector).toBe(true)
+    const match = matchesAnyHideSelector(collapseButton, printHideSelectors())
+    expect(match).toBeDefined()
   })
 
-  it('CSS selector section[data-column-id] > div matches wrapper in SortableColumn (DnD column)', () => {
-    const { container } = render(
-      <BrowserRouter>
-        <SortableColumn
-          column={mockColumn}
-          tasks={[mockTask]}
-          isCollapsible={true}
-          isCollapsed={true}
-        />
-      </BrowserRouter>
+  it('does NOT hide the draggable column header — only the collapse control inside it', () => {
+    // dnd-kit's useSortable() spreads role="button" onto the whole header
+    // for keyboard-drag accessibility (see SortableColumn.test.tsx: "the
+    // header which is also a button via DnD"). A print rule that hides
+    // [role="button"] wholesale would hide the column title + specimen
+    // count along with the collapse control.
+    const { container } = renderWithDnd(
+      <SortableColumn
+        column={mockColumn}
+        tasks={[mockTask]}
+        isCollapsible={true}
+        isCollapsed={false}
+        onToggleCollapse={() => {}}
+      />
     )
 
-    // Find the section with data-column-id
-    const section = container.querySelector('section[data-column-id]') as HTMLElement
-    expect(section).toBeInTheDocument()
-    expect(section?.getAttribute('data-column-id')).toBe('1')
+    const header = container.querySelector('header[data-testid="column-header"]') as HTMLElement
+    expect(header).toBeInTheDocument()
+    expect(header.getAttribute('role')).toBe('button') // confirms the dnd-kit hazard is real
 
-    // Find the direct child div (the one with display: none when collapsed)
-    const directChildDiv = Array.from(section?.children || []).find(
-      (child) => child.tagName === 'DIV' && child !== section?.querySelector('header')?.parentElement
-    ) as HTMLElement
-
-    expect(directChildDiv).toBeDefined()
-    expect(directChildDiv?.style.display).toBe('none')
-
-    // Verify the selector matches
-    const matchesSelector = section?.querySelector(':scope > div') === directChildDiv
-    expect(matchesSelector).toBe(true)
+    const match = matchesAnyHideSelector(header, printHideSelectors())
+    expect(match, `header matched print-hide selector "${match}"`).toBeUndefined()
   })
 
-  it('print media rule section[data-column-id] > div { display: block !important } will override collapsed state', () => {
+  it('does NOT hide a draggable task card — dnd-kit also puts role="button" on its wrapper', () => {
+    const { container } = renderWithDnd(<SortableTaskCard task={mockTask} />)
+
+    const wrapper = container.querySelector(`[data-draggable-id="task-${mockTask.id}"]`) as HTMLElement
+    expect(wrapper).toBeInTheDocument()
+    expect(wrapper.getAttribute('role')).toBe('button')
+
+    const match = matchesAnyHideSelector(wrapper, printHideSelectors())
+    expect(match, `task card wrapper matched print-hide selector "${match}"`).toBeUndefined()
+
+    const article = container.querySelector(`article[data-task-id="${mockTask.id}"]`) as HTMLElement
+    expect(article).toBeInTheDocument()
+    const articleMatch = matchesAnyHideSelector(article, printHideSelectors())
+    expect(articleMatch, `task card matched print-hide selector "${articleMatch}"`).toBeUndefined()
+  })
+})
+
+describe('Print stylesheet — collapsed columns expand for archival', () => {
+  const mockColumn: ColumnType = { id: 1, name: 'Todo', position: 0 }
+  const mockTask: Task = {
+    id: 101,
+    slug: 'TASK-001',
+    title: 'Task 1',
+    excerpt: 'Description',
+    assignee: 'agent-1',
+    column_id: 1,
+    epic_id: null,
+    updated_at: '2026-05-01T12:00:00Z',
+  }
+
+  it('CSS selector section[data-column-id] > div matches the collapsed content wrapper in Column', () => {
     const { container } = render(
       <BrowserRouter>
-        <Column
-          column={mockColumn}
-          tasks={[mockTask]}
-          isCollapsible={true}
-          isCollapsed={true}
-        />
+        <Column column={mockColumn} tasks={[mockTask]} isCollapsible={true} isCollapsed={true} />
       </BrowserRouter>
     )
 
-    // In a real print scenario, the CSS rule would override the inline style
-    const section = container.querySelector('section[data-column-id]')
+    const section = container.querySelector('section[data-column-id]') as HTMLElement
     const wrapper = section?.querySelector(':scope > div') as HTMLElement
 
-    // The DOM has display: none inline style when collapsed
     expect(wrapper?.style.display).toBe('none')
-
-    // But print media CSS rule targets this exact selector to override it
-    const selectorWillMatch = document.documentElement.querySelectorAll(
-      'section[data-column-id] > div'
-    ).length >= 1 || wrapper !== null
-
-    expect(selectorWillMatch).toBe(true)
-  })
-
-  it('Column component renders with data-column-id attribute (not just SortableColumn)', () => {
-    const { container } = render(
-      <BrowserRouter>
-        <Column column={mockColumn} tasks={[mockTask]} />
-      </BrowserRouter>
-    )
-
-    const section = container.querySelector('section[data-column-id]')
-    expect(section).toBeInTheDocument()
-    expect(section?.getAttribute('data-column-id')).toBe('1')
-  })
-
-  it('SortableColumn component renders with data-column-id attribute', () => {
-    const { container } = render(
-      <BrowserRouter>
-        <SortableColumn column={mockColumn} tasks={[mockTask]} />
-      </BrowserRouter>
-    )
-
-    const section = container.querySelector('section[data-column-id]')
-    expect(section).toBeInTheDocument()
-    expect(section?.getAttribute('data-column-id')).toBe('1')
+    expect(section?.querySelector(':scope > div')).toBe(wrapper)
   })
 })

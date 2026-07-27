@@ -26,6 +26,7 @@ export function Gutter({ filterText = '', onFilterChange }: Props) {
       {onFilterChange && (
         <input
           type="text"
+          data-testid="filter-input"
           placeholder="Filter tasks..."
           value={filterText}
           onChange={(e) => onFilterChange(e.target.value)}

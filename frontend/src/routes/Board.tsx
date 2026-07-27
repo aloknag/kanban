@@ -51,7 +51,7 @@ import {
   Task,
 } from '../lib/api'
 import { columnReorderReducer } from '../lib/columnReorder'
-import { shouldRejectDragEnd } from '../lib/dndGuards'
+import { shouldRejectDragEnd, resolveDroppableColumnId } from '../lib/dndGuards'
 
 export function Board() {
   const queryClient = useQueryClient()
@@ -270,23 +270,30 @@ export function Board() {
         return
       }
 
-      // Determine if this is a task move (task-X to column-Y) or column reorder
+      // Determine if this is a task move (task-X onto a column) or column reorder.
+      // over.id may come back as either a column's own id (from that column's
+      // useSortable registration, used for reordering) or `column-${id}` (from
+      // the separate useDroppable registered on the same node for task drops)
+      // — both target the same column, so normalize before branching.
       const isTaskDrag = String(active.id).startsWith('task-')
-      const isColumnDrop = String(over.id).startsWith('column-')
+      const overColumnId = resolveDroppableColumnId(over.id)
 
-      if (isTaskDrag && isColumnDrop) {
+      if (isTaskDrag) {
+        if (overColumnId === null) {
+          return
+        }
+
         // Task-to-column move
         const taskId = parseInt(String(active.id).substring(5), 10) // Extract ID from "task-X"
-        const columnId = parseInt(String(over.id).substring(7), 10) // Extract ID from "column-X"
 
         const taskToMove = tasks.find(t => t.id === taskId)
-        if (!taskToMove || taskToMove.column_id === columnId) {
+        if (!taskToMove || taskToMove.column_id === overColumnId) {
           return
         }
 
         // Optimistic update: move task in cache immediately
         const updatedTasks = tasks.map(t =>
-          t.id === taskId ? { ...t, column_id: columnId } : t
+          t.id === taskId ? { ...t, column_id: overColumnId } : t
         )
         queryClient.setQueryData(['tasks'], updatedTasks)
 
@@ -294,7 +301,7 @@ export function Board() {
         setIsReorderInFlight(true)
 
         // Call API with optimistic update
-        patchTask(taskId, { column_id: columnId })
+        patchTask(taskId, { column_id: overColumnId })
           .catch(() => {
             // On error, refetch to get the true state (rollback)
             queryClient.invalidateQueries({ queryKey: ['tasks'] })
@@ -303,16 +310,20 @@ export function Board() {
             setIsReorderInFlight(false)
           })
       } else {
+        if (overColumnId === null) {
+          return
+        }
+
         // Column reorder (existing logic)
         const oldIndex = sortedColumns.findIndex(c => c.id === active.id)
-        const newIndex = sortedColumns.findIndex(c => c.id === over.id)
+        const newIndex = sortedColumns.findIndex(c => c.id === overColumnId)
 
         if (oldIndex === -1 || newIndex === -1) {
           return
         }
 
         // Apply guard: prevent Done column moves
-        if (shouldRejectDragEnd(active.id, over.id, columns)) {
+        if (shouldRejectDragEnd(active.id, overColumnId, columns)) {
           console.warn('Cannot reorder Done column — it must remain at bottom')
           return
         }
@@ -398,7 +409,7 @@ export function Board() {
       }
     },
     '/': () => {
-      // TODO: Focus the filter input in TopRule
+      document.querySelector<HTMLInputElement>('[data-testid="filter-input"]')?.focus()
     },
     '?': () => setKeyboardSheetOpen(!keyboardSheetOpen),
     t: toggleTheme,

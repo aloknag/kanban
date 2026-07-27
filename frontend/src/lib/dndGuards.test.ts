@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { shouldRejectDragEnd } from './dndGuards'
+import { shouldRejectDragEnd, resolveDroppableColumnId } from './dndGuards'
 import { Column } from './api'
 
 describe('dndGuards.shouldRejectDragEnd', () => {
@@ -86,5 +86,34 @@ describe('dndGuards.shouldRejectDragEnd', () => {
       const result = shouldRejectDragEnd(1, 2, nosDoneColumns)
       expect(result).toBe(false)
     })
+  })
+})
+
+describe('dndGuards.resolveDroppableColumnId', () => {
+  // SortableColumn.tsx registers the SAME <section> node under two dnd-kit
+  // ids at once: useSortable({ id: column.id }) for column reordering, and
+  // useDroppable({ id: `column-${column.id}` }) for task drops. Collision
+  // detection can resolve `over.id` to either form depending on which
+  // registration it picks, so any code branching on `over.id` needs to
+  // normalize both shapes to the same underlying column id.
+  it('extracts the numeric id from a "column-<id>" droppable id', () => {
+    expect(resolveDroppableColumnId('column-5')).toBe(5)
+  })
+
+  it('returns a bare numeric column id unchanged', () => {
+    expect(resolveDroppableColumnId(5)).toBe(5)
+  })
+
+  it('parses a bare numeric-string column id', () => {
+    expect(resolveDroppableColumnId('5')).toBe(5)
+  })
+
+  it('returns null for an id that resolves to neither form', () => {
+    expect(resolveDroppableColumnId('task-5')).toBeNull()
+  })
+
+  it('returns null for null/undefined', () => {
+    expect(resolveDroppableColumnId(null)).toBeNull()
+    expect(resolveDroppableColumnId(undefined)).toBeNull()
   })
 })

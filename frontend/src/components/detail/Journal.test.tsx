@@ -69,7 +69,7 @@ describe('Journal', () => {
       // First entry should be claude-code (newest: 14:22:30)
       expect(entries[0]).toHaveTextContent('claude-code');
       expect(entries[0].closest('[data-testid="journal-entry"]')).toHaveTextContent(
-        '2026-05-01 14:22:30'
+        '2026-05-01T14:22:30Z'
       );
     });
   });

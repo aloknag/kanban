@@ -18,9 +18,9 @@ describe('JournalEntry', () => {
     expect(author).toHaveClass('font-mono', 'inline-block', 'w-[16ch]', 'truncate');
   });
 
-  it('renders ISO UTC timestamp in mono font with time element', () => {
+  it('renders canonical ISO 8601 UTC timestamp in mono font with time element', () => {
     render(<JournalEntry comment={mockComment} isLatest={false} />);
-    const timestamp = screen.getByText('2026-05-01 14:22:30');
+    const timestamp = screen.getByText('2026-05-01T14:22:30Z');
     expect(timestamp).toBeInTheDocument();
     expect(timestamp.tagName).toBe('TIME');
     expect(timestamp).toHaveAttribute('dateTime', '2026-05-01T14:22:30Z');
