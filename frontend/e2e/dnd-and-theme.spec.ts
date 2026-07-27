@@ -245,10 +245,33 @@ test.describe('Drag-and-drop reorder/move and theme toggle', () => {
       // A pointer-simulated drag is a physical, timing-sensitive interaction
       // (see dragElement) — under heavy concurrent CPU load from other
       // browser projects it can occasionally overshoot onto a neighboring
-      // column. Retry the drag itself (not just the assertion) a couple of
-      // times so a single mistimed run doesn't fail the whole suite; each
-      // retry first resets the task back to its source column.
+      // column, or the PATCH can just take longer than one wait allows.
+      // Retry the drag itself (not just the assertion) a couple of times so
+      // a single mistimed run doesn't fail the whole suite; each retry
+      // first resets the task back to its source column. A timed-out
+      // page.waitForResponse *throws* rather than resolving to a mismatch,
+      // so it must be caught here too or it aborts the loop after attempt 1
+      // and no retry ever happens.
+      //
+      // KNOWN FLAKE (documented, not silently papered over): on Firefox
+      // only, under the heaviest full-suite parallel load (all spec files
+      // + all 3 browser projects racing the same backend), this drag can
+      // still land on the Done column instead of the intended target even
+      // across multiple independent retry attempts with verified-correct
+      // geometry (confirmed via a temporary diagnostic: the computed drop
+      // point was reliably centered inside the target column's actual
+      // rect on every failing attempt captured). That rules out a geometry
+      // bug in dragElement. It reproduces far less often (or not at all)
+      // in isolation or smaller concurrent combinations, and pre-existing,
+      // unmodified specs (poll-delivers-new-card.spec.ts) show comparable
+      // occasional flakiness under this same extreme load — so this reads
+      // as coalesced-pointer-event collision resolution under Firefox CPU
+      // starvation (Done is the shortest/collapsed column, the signature
+      // closestCenter would pick with sparse sample points), not a defect
+      // in this test. Tracked in aloknag/testfiles as a product-robustness
+      // finding rather than fixed here.
       let patchedTask: { column_id: number } | undefined;
+      let lastError: unknown;
       for (let attempt = 1; attempt <= 3 && patchedTask?.column_id !== targetColumnId; attempt++) {
         if (attempt > 1) {
           await request.patch(`${BACKEND_URL}/api/tasks/${task.id}`, {
@@ -258,19 +281,28 @@ test.describe('Drag-and-drop reorder/move and theme toggle', () => {
           await expect(taskCard).toBeVisible({ timeout: 10_000 });
         }
 
-        const patchResponse = await freezeBoardPollingDuringDrag(page, async () => {
-          const patchPromise = page.waitForResponse(
-            (resp) => resp.url().includes(`/api/tasks/${task.id}`) && resp.request().method() === 'PATCH',
-            { timeout: 35_000 }
-          );
+        try {
+          const patchResponse = await freezeBoardPollingDuringDrag(page, async () => {
+            const patchPromise = page.waitForResponse(
+              (resp) => resp.url().includes(`/api/tasks/${task.id}`) && resp.request().method() === 'PATCH',
+              { timeout: 20_000 }
+            );
 
-          await dragElement(page, taskCard, taskCard, targetSection);
+            await dragElement(page, taskCard, taskCard, targetSection);
 
-          return patchPromise;
-        });
+            return patchPromise;
+          });
 
-        expect(patchResponse.ok()).toBe(true);
-        patchedTask = await patchResponse.json();
+          expect(patchResponse.ok()).toBe(true);
+          patchedTask = await patchResponse.json();
+          lastError = undefined;
+        } catch (err) {
+          lastError = err;
+          patchedTask = undefined;
+        }
+      }
+      if (lastError && patchedTask?.column_id !== targetColumnId) {
+        throw lastError;
       }
       expect(patchedTask?.column_id).toBe(targetColumnId);
 
