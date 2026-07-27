@@ -66,34 +66,37 @@ function matchesAnyHideSelector(el: Element, selectors: string[]): string | unde
   })
 }
 
+const mockColumn: ColumnType = { id: 1, name: 'Todo', position: 0 }
+const mockTask: Task = {
+  id: 101,
+  slug: 'TASK-001',
+  title: 'Task 1',
+  excerpt: 'Description',
+  assignee: 'agent-1',
+  column_id: 1,
+  epic_id: null,
+  updated_at: '2026-05-01T12:00:00Z',
+}
+
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+
+// Renders inside a real DndContext/SortableContext, the way Board.tsx
+// actually renders SortableColumn — required for useSortable()/
+// useDroppable() to run without throwing.
+const renderWithDnd = (component: React.ReactElement) =>
+  render(
+    <BrowserRouter>
+      <QueryClientProvider client={queryClient}>
+        <DndContext>
+          <SortableContext items={[mockColumn.id]} strategy={verticalListSortingStrategy}>
+            {component}
+          </SortableContext>
+        </DndContext>
+      </QueryClientProvider>
+    </BrowserRouter>
+  )
+
 describe('Print stylesheet — hides chrome controls without hiding their containers', () => {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-
-  const mockColumn: ColumnType = { id: 1, name: 'Todo', position: 0 }
-  const mockTask: Task = {
-    id: 101,
-    slug: 'TASK-001',
-    title: 'Task 1',
-    excerpt: 'Description',
-    assignee: 'agent-1',
-    column_id: 1,
-    epic_id: null,
-    updated_at: '2026-05-01T12:00:00Z',
-  }
-
-  const renderWithDnd = (component: React.ReactElement) =>
-    render(
-      <BrowserRouter>
-        <QueryClientProvider client={queryClient}>
-          <DndContext>
-            <SortableContext items={[mockColumn.id]} strategy={verticalListSortingStrategy}>
-              {component}
-            </SortableContext>
-          </DndContext>
-        </QueryClientProvider>
-      </BrowserRouter>
-    )
-
   it('the real collapse <button> is targeted by a print hide rule (positive control)', () => {
     const { container } = renderWithDnd(
       <SortableColumn
@@ -154,17 +157,24 @@ describe('Print stylesheet — hides chrome controls without hiding their contai
 })
 
 describe('Print stylesheet — collapsed columns expand for archival', () => {
-  const mockColumn: ColumnType = { id: 1, name: 'Todo', position: 0 }
-  const mockTask: Task = {
-    id: 101,
-    slug: 'TASK-001',
-    title: 'Task 1',
-    excerpt: 'Description',
-    assignee: 'agent-1',
-    column_id: 1,
-    epic_id: null,
-    updated_at: '2026-05-01T12:00:00Z',
-  }
+  // SortableColumn is the component Board.tsx actually renders in
+  // production (Column itself is not imported anywhere outside tests) —
+  // this is the one that must actually satisfy AC8's "all columns
+  // expanded" requirement. A prior version of this suite only asserted
+  // this against Column, so a divergence between the two (e.g. dnd-kit
+  // wrapping the collapsible content in an extra node) could have broken
+  // real print output while this test kept passing.
+  it('CSS selector section[data-column-id] > div matches the collapsed content wrapper in SortableColumn', () => {
+    const { container } = renderWithDnd(
+      <SortableColumn column={mockColumn} tasks={[mockTask]} isCollapsible={true} isCollapsed={true} />
+    )
+
+    const section = container.querySelector('section[data-column-id]') as HTMLElement
+    const wrapper = section?.querySelector(':scope > div') as HTMLElement
+
+    expect(wrapper?.style.display).toBe('none')
+    expect(section?.querySelector(':scope > div')).toBe(wrapper)
+  })
 
   it('CSS selector section[data-column-id] > div matches the collapsed content wrapper in Column', () => {
     const { container } = render(

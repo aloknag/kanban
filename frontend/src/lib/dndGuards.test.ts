@@ -108,12 +108,49 @@ describe('dndGuards.resolveDroppableColumnId', () => {
     expect(resolveDroppableColumnId('5')).toBe(5)
   })
 
-  it('returns null for an id that resolves to neither form', () => {
+  it('returns null for an id that resolves to neither form, and no data is available', () => {
     expect(resolveDroppableColumnId('task-5')).toBeNull()
   })
 
   it('returns null for null/undefined', () => {
     expect(resolveDroppableColumnId(null)).toBeNull()
     expect(resolveDroppableColumnId(undefined)).toBeNull()
+  })
+
+  // SortableTaskCard.tsx's useSortable({ id: `task-${task.id}` }) ALSO
+  // registers that card as a droppable against the shared DndContext (any
+  // useSortable call does). Board.tsx's closestCenter collision detection
+  // has no data.type filter, so dropping on a column that already has
+  // cards commonly resolves `over` to a task card, not the column section
+  // — over.id comes back as `task-<id>`, a third shape resolveDroppableColumnId
+  // must handle via the `data.current` dnd-kit attaches to the droppable,
+  // since the id string alone carries no column information.
+  describe('resolving via over.data.current (the task-<id> shape)', () => {
+    it('resolves a task-card over.id to that task\'s own column_id via data.current', () => {
+      const overData = { type: 'Task', task: { id: 7, column_id: 2 } }
+      expect(resolveDroppableColumnId('task-7', overData)).toBe(2)
+    })
+
+    it('resolves a column over.id to the column\'s id via data.current', () => {
+      const overData = { type: 'Column', column: { id: 9 } }
+      expect(resolveDroppableColumnId('column-9', overData)).toBe(9)
+    })
+
+    it('data.current takes precedence over id-string parsing when both are present', () => {
+      // Defensive: if id parsing and data ever disagree, trust the data
+      // dnd-kit attached to the droppable over string-sniffing the id.
+      const overData = { type: 'Task', task: { id: 7, column_id: 3 } }
+      expect(resolveDroppableColumnId('column-9', overData)).toBe(3)
+    })
+
+    it('falls back to id-string parsing when data.current has no recognized type', () => {
+      expect(resolveDroppableColumnId('column-5', { type: 'Something' })).toBe(5)
+      expect(resolveDroppableColumnId(5, undefined)).toBe(5)
+    })
+
+    it('still returns null for a task-<id> over.id when data.current is missing entirely', () => {
+      expect(resolveDroppableColumnId('task-7', null)).toBeNull()
+      expect(resolveDroppableColumnId('task-7', undefined)).toBeNull()
+    })
   })
 })

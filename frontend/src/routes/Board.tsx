@@ -51,7 +51,7 @@ import {
   Task,
 } from '../lib/api'
 import { columnReorderReducer } from '../lib/columnReorder'
-import { shouldRejectDragEnd, resolveDroppableColumnId } from '../lib/dndGuards'
+import { shouldRejectDragEnd, resolveDroppableColumnId, DroppableData } from '../lib/dndGuards'
 
 export function Board() {
   const queryClient = useQueryClient()
@@ -270,13 +270,15 @@ export function Board() {
         return
       }
 
-      // Determine if this is a task move (task-X onto a column) or column reorder.
-      // over.id may come back as either a column's own id (from that column's
-      // useSortable registration, used for reordering) or `column-${id}` (from
-      // the separate useDroppable registered on the same node for task drops)
-      // — both target the same column, so normalize before branching.
+      // Determine if this is a task move (task-X onto a column) or column
+      // reorder. `over` can resolve to a column's own id, `column-${id}`,
+      // or another task card's `task-${id}` (every useSortable registration
+      // is also a droppable, and closestCenter has no data.type filter, so
+      // dropping on a column that already has cards commonly lands on a
+      // card rather than the column) — resolveDroppableColumnId normalizes
+      // all three via `over.data.current`, which dnd-kit always attaches.
       const isTaskDrag = String(active.id).startsWith('task-')
-      const overColumnId = resolveDroppableColumnId(over.id)
+      const overColumnId = resolveDroppableColumnId(over.id, over.data?.current as DroppableData)
 
       if (isTaskDrag) {
         if (overColumnId === null) {

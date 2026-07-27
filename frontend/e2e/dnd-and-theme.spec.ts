@@ -253,23 +253,31 @@ test.describe('Drag-and-drop reorder/move and theme toggle', () => {
       // so it must be caught here too or it aborts the loop after attempt 1
       // and no retry ever happens.
       //
-      // KNOWN FLAKE (documented, not silently papered over): on Firefox
-      // only, under the heaviest full-suite parallel load (all spec files
-      // + all 3 browser projects racing the same backend), this drag can
-      // still land on the Done column instead of the intended target even
-      // across multiple independent retry attempts with verified-correct
-      // geometry (confirmed via a temporary diagnostic: the computed drop
-      // point was reliably centered inside the target column's actual
-      // rect on every failing attempt captured). That rules out a geometry
-      // bug in dragElement. It reproduces far less often (or not at all)
-      // in isolation or smaller concurrent combinations, and pre-existing,
+      // KNOWN FLAKE (documented, not silently papered over): under the
+      // heaviest full-suite parallel load (all spec files + all 3 browser
+      // projects racing the same backend), mostly on Firefox, this drag can
+      // still time out waiting for the PATCH. This is NOT the "drop lands
+      // on the wrong column" bug that used to live here — that was a real
+      // app bug (resolveDroppableColumnId didn't resolve the `task-<id>`
+      // shape of `over`, so a drop landing on an existing card in the
+      // destination column silently no-op'd) and is fixed in
+      // frontend/src/lib/dndGuards.ts. Confirmed via a temporary
+      // instrumentation pass logging every handleDragEnd invocation: across
+      // ~24 captured drags (including a direct hit on the exact
+      // wrong-column scenario, now resolving correctly), the "lands on
+      // Done" pattern did not reproduce even once. The residual timeout
+      // failures showed *zero* handleDragEnd invocations for the whole
+      // test — dnd-kit's onDragEnd never fired at all, which is upstream of
+      // any application code. That's consistent with the simulated pointer
+      // gesture (mousedown → interpolated mousemove steps → mouseup) not
+      // being recognized as a completed drag by dnd-kit when the browser is
+      // under severe CPU contention from ~50+ concurrent tests; pre-existing,
       // unmodified specs (poll-delivers-new-card.spec.ts) show comparable
-      // occasional flakiness under this same extreme load — so this reads
-      // as coalesced-pointer-event collision resolution under Firefox CPU
-      // starvation (Done is the shortest/collapsed column, the signature
-      // closestCenter would pick with sparse sample points), not a defect
-      // in this test. Tracked in aloknag/testfiles as a product-robustness
-      // finding rather than fixed here.
+      // occasional flakiness under this same load. Tracked as an e2e
+      // test-infrastructure reliability note in aloknag/testfiles#63
+      // (retitled/corrected — it was originally mis-filed as a product-side
+      // dnd-kit collision-resolution defect before this instrumentation
+      // pass ruled that out).
       let patchedTask: { column_id: number } | undefined;
       let lastError: unknown;
       for (let attempt = 1; attempt <= 3 && patchedTask?.column_id !== targetColumnId; attempt++) {
