@@ -7,28 +7,77 @@ interface MermaidBlockProps {
   figureNumber: number
 }
 
+/**
+ * Resolve the app's --c- and --f-mono custom properties to concrete values
+ * at render time (after the DOM exists), instead of passing unresolved
+ * var(--x) strings — mermaid's color parser can't handle var() and throws
+ * "Unsupported color format" if it's given one directly (see main.tsx).
+ */
+function resolveMermaidThemeVariables() {
+  const styles = getComputedStyle(document.documentElement)
+  const cssVar = (name: string) => styles.getPropertyValue(name).trim()
+  const stripQuotes = (value: string) => value.replace(/^['"]+|['"]+$/g, '')
+
+  return {
+    background: cssVar('--c-paper'),
+    primaryColor: cssVar('--c-card'),
+    primaryTextColor: cssVar('--c-ink'),
+    primaryBorderColor: cssVar('--c-ink'),
+    lineColor: cssVar('--c-ink-2'),
+    fontFamily: stripQuotes(cssVar('--f-mono')),
+    fontSize: '12px',
+  }
+}
+
 export function MermaidBlock({ code, figureNumber }: MermaidBlockProps) {
   const svgContainerRef = useRef<HTMLDivElement>(null)
   const [svg, setSvg] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
+  const [themeTick, setThemeTick] = useState(0)
+
+  // Re-render whenever the app theme toggles (data-theme flips on <html>),
+  // so existing diagrams re-theme instead of staying stuck on stale colors.
+  useEffect(() => {
+    const observer = new MutationObserver(() => setThemeTick(t => t + 1))
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    })
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
+    let cancelled = false
+
     const renderDiagram = async () => {
       if (!svgContainerRef.current) return
 
       try {
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: 'base',
+          themeVariables: resolveMermaidThemeVariables(),
+          flowchart: { curve: 'linear', htmlLabels: false },
+        })
+
         const id = `mermaid-${figureNumber}`
         const result = await mermaid.render(id, code)
+        if (cancelled) return
         setSvg(result.svg)
         setError(null)
       } catch (err) {
+        if (cancelled) return
         setError(err instanceof Error ? err.message : 'Failed to render diagram')
         setSvg('')
       }
     }
 
     renderDiagram()
-  }, [code, figureNumber])
+
+    return () => {
+      cancelled = true
+    }
+  }, [code, figureNumber, themeTick])
 
   if (error) {
     return (

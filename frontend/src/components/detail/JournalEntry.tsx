@@ -16,16 +16,8 @@ type Props = {
 };
 
 export function JournalEntry({ comment, isLatest }: Props) {
-  // Format timestamp as ISO 8601: "2026-05-01 14:22:30"
-  const timestamp = new Intl.DateTimeFormat('sv-SE', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    timeZone: 'UTC',
-  }).format(new Date(comment.created_at));
+  // Format timestamp as canonical ISO 8601 UTC: "2026-05-01T14:22:30Z"
+  const timestamp = new Date(comment.created_at).toISOString().replace(/\.\d{3}Z$/, 'Z');
 
   return (
     <div data-testid="journal-entry">
