@@ -163,7 +163,10 @@ test.describe('Drag-and-drop reorder/move and theme toggle', () => {
   test('dragging a column header reorders columns, PATCHes /api/columns/reorder, and the order survives reload (AC1)', async ({
     page,
   }) => {
-    test.slow(); // may wait behind withColumnReorderLock for concurrent browser projects
+    // May wait behind withColumnReorderLock (up to 30s) for concurrent
+    // browser projects, plus a generous PATCH wait — test.slow()'s default
+    // 3x isn't enough headroom for both together under heavy load.
+    test.setTimeout(120_000);
     await withColumnReorderLock(async () => {
       const headers = page.locator('[data-testid="column-header"]');
       const sections = page.locator('[data-testid="column"]');
@@ -179,7 +182,7 @@ test.describe('Drag-and-drop reorder/move and theme toggle', () => {
       const patchResponse = await freezeBoardPollingDuringDrag(page, async () => {
         const patchPromise = page.waitForResponse(
           (resp) => resp.url().includes('/api/columns/reorder') && resp.request().method() === 'PATCH',
-          { timeout: 20_000 }
+          { timeout: 35_000 }
         );
 
         await dragElement(page, headers.nth(0), sections.nth(0), sections.nth(1));
@@ -258,7 +261,7 @@ test.describe('Drag-and-drop reorder/move and theme toggle', () => {
         const patchResponse = await freezeBoardPollingDuringDrag(page, async () => {
           const patchPromise = page.waitForResponse(
             (resp) => resp.url().includes(`/api/tasks/${task.id}`) && resp.request().method() === 'PATCH',
-            { timeout: 20_000 }
+            { timeout: 35_000 }
           );
 
           await dragElement(page, taskCard, taskCard, targetSection);
